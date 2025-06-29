@@ -56,20 +56,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: true }
-      - name: Download all JSON artifacts
+        with:
+          persist-credentials: true
+
+      # 3.1 Download all product JSON artifacts into the repo root
+      - name: Download all catalogues
         uses: actions/download-artifact@v4
         with:
           pattern: products-*
           path: .
-      - name: Commit once
+
+      # 3.2 Commit & push if anything actually changed
+      - name: Commit refreshed catalogues
         run: |
           git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add *_products.json
           if git diff --cached --quiet; then
-            echo "Nothing new to commit."
+            echo 'Nothing new to commit.'
             exit 0
           fi
-          git commit -m "chore(data): refresh cube catalogues"
+          git commit -m 'chore(data): refresh cube catalogues'
           git push
