@@ -49,16 +49,27 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: products-${{ matrix.store }}
-          path: ${{ matrix.store }}_products.json
+          path: ${{ matrix.store }}_products.JSON
 
-      # 2.6  OPTIONAL – commit the fresh JSON back to the default branch
-      #      Remove this block if you don’t want auto-commits.
-      - name: Commit updated JSON
+  commit-all:
+    needs: scrape
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: true }
+      - name: Download all JSON artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: products-*
+          path: .
+      - name: Commit once
         run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add ${{ matrix.store }}_products.json
-          if ! git diff --cached --quiet; then
-            git commit -m "chore(data): update products for ${{ matrix.store }}"
-            git push
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add *_products.json
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit."
+            exit 0
           fi
+          git commit -m "chore(data): refresh cube catalogues"
+          git push
