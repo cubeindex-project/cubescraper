@@ -1,0 +1,61 @@
+name: Fetch cube store catalogues
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. Run nightly at 03:00 UTC (adjust as you wish)
+#    + reusable “dispatch” so you can trigger it manually from the Actions tab
+# ──────────────────────────────────────────────────────────────────────────────
+on:
+  schedule:
+    - cron: "0 3 * * *" # every day at 03:00 UTC
+  workflow_dispatch:
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 2. One job per store thanks to a matrix
+#    (keys MUST match the ones in STORES inside scrape_with_async_spinner.py)
+# ──────────────────────────────────────────────────────────────────────────────
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        store: [scs, cubicle, cubelelo, dailypuzzles, gancube, kewbz, sc-za]
+
+    steps:
+      # 2.1  Check out your repo
+      - uses: actions/checkout@v4
+
+      # 2.2  Set up Python (same version you test locally)
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 2.3  Install runtime deps (requests + any others you need)
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests glom
+
+      # 2.4  Run the scraper for the store in this matrix slot
+      - name: Scrape ${{ matrix.store }}
+        run: |
+          python scrape_with_async_spinner.py ${{ matrix.store }}
+
+      # 2.5  Upload the JSON as a workflow artifact (keeps history even
+      #      if you don’t commit the file back to the repo)
+      - name: Upload catalogue
+        uses: actions/upload-artifact@v4
+        with:
+          name: products-${{ matrix.store }}
+          path: ${{ matrix.store }}_products.json
+
+      # 2.6  OPTIONAL – commit the fresh JSON back to the default branch
+      #      Remove this block if you don’t want auto-commits.
+      - name: Commit updated JSON
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ${{ matrix.store }}_products.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(data): update products for ${{ matrix.store }}"
+            git push
+          fi
