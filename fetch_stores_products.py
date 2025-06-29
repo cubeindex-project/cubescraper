@@ -123,5 +123,6 @@ if __name__ == "__main__":
     out_file = args.outfile or f"{args.store}_products.json"
 
     all_products = fetch_all_products(base_url)
-    pathlib.Path(out_file).write_text(json.dumps(all_products, indent=2))
+    data = {"store": args.store, "products": all_products}
+    pathlib.Path(out_file).write_text(json.dumps(data, indent=2), encoding="utf-8")
     print(f"📄  Saved to {out_file}")
