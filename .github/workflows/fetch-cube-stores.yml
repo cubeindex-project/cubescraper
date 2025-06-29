@@ -41,7 +41,7 @@ jobs:
       # 2.4  Run the scraper for the store in this matrix slot
       - name: Scrape ${{ matrix.store }}
         run: |
-          python index.py ${{ matrix.store }}
+          python fetch_stores_products.py ${{ matrix.store }}
 
       # 2.5  Upload the JSON as a workflow artifact (keeps history even
       #      if you don’t commit the file back to the repo)
