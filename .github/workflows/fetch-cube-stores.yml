@@ -72,15 +72,10 @@ jobs:
         run: |
           git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Stage every JSON placed in the repo root by download-artifact
-          git add *_products.json
-
-          # Abort early if no file changed
+          git add ./stores_products/*_products.json
           if git diff --cached --quiet; then
             echo "Nothing new to commit."
             exit 0
           fi
-
           git commit -m "chore(data): refresh cube catalogues"
           git push
