@@ -49,7 +49,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: products-${{ matrix.store }}
-          path: ${{ matrix.store }}_products.JSON
+          path: ${{ matrix.store }}_products.json
 
   commit-all:
     needs: scrape
