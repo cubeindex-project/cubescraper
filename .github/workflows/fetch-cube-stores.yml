@@ -65,16 +65,22 @@ jobs:
         with:
           pattern: products-*
           path: .
+          merge-multiple: true
 
       # 3.2 Commit & push if anything actually changed
       - name: Commit refreshed catalogues
         run: |
           git config --global user.name  "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Stage every JSON placed in the repo root by download-artifact
           git add *_products.json
+
+          # Abort early if no file changed
           if git diff --cached --quiet; then
-            echo 'Nothing new to commit.'
+            echo "Nothing new to commit."
             exit 0
           fi
-          git commit -m 'chore(data): refresh cube catalogues'
+
+          git commit -m "chore(data): refresh cube catalogues"
           git push
