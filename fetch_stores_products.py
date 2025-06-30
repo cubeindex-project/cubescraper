@@ -22,6 +22,10 @@ STORES: Dict[str, str] = {
     "gancube": "https://gancube.com/products.json",
     "kewbz": "https://kewbz.co.uk/products.json",
     "sc-za": "https://www.speedcubes.co.za/products.json",
+    "sc-au": "https://speedcube.com.au/products.json",
+    "d-fan": "https://d-fantix.com/products.json",
+    "kill-cubes": "https://killercubes.com/products.json",
+    "cube-speed": "https://cubeforspeed.com/products.json"
 }
 
 PAGE_LIMIT = 250  # Shopify max per page
