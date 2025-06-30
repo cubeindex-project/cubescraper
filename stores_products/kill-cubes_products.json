@@ -1,0 +1,2391 @@
+{
+  "store": "kill-cubes",
+  "products": [
+    {
+      "id": 8006863028359,
+      "title": "Tru-Cubing Mat",
+      "handle": "tru-cubing-mat",
+      "body_html": "<p><span>Take your speedcubing to the next level with the all-new </span><span>TruCubing Mats</span><span>! Designed with precision and performance in mind, these mats provide the perfect surface for smooth, controlled cube drops and lightning-fast solves. Made from premium, durable materials, TruCubing Mats feature:</span></p>\n<p><span><span class=\"Apple-tab-span\"> </span></span><span>\u2022</span><span><span class=\"Apple-tab-span\"> </span></span><span>Non-slip Base:</span><span> Keeps your mat firmly in place, even during the most intense speedcubing sessions.</span></p>\n<p><span><span class=\"Apple-tab-span\"> </span></span><span>\u2022</span><span><span class=\"Apple-tab-span\"> </span></span><span>Soft Surface:</span><span> Cushions your cube and prevents unnecessary wear, ensuring your gear stays in top condition.</span></p>\n<p><span><span class=\"Apple-tab-span\"> </span></span><span>\u2022</span><span><span class=\"Apple-tab-span\"> </span></span><span>Stylish Designs:</span><span> Show off your personality with vibrant TruCubing-themed graphics that stand out on any desk or competition table.</span></p>\n<p><span><span class=\"Apple-tab-span\"> </span></span><span>\u2022</span><span><span class=\"Apple-tab-span\"> </span></span><span>Compact and Portable:</span><span> Lightweight and easy to roll up, making it the perfect accessory for home use or competitions.</span></p>",
+      "published_at": "2024-12-17T19:30:30-07:00",
+      "created_at": "2024-12-17T19:28:06-07:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "Killer Cubes",
+      "product_type": "Mouse pad",
+      "tags": [],
+      "variants": [
+        {
+          "id": 42204933685383,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": null,
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "5.95",
+          "grams": 142,
+          "compare_at_price": "5.95",
+          "position": 1,
+          "product_id": 8006863028359,
+          "created_at": "2024-12-17T19:28:06-07:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 33277947641991,
+          "created_at": "2024-12-17T19:34:08-07:00",
+          "position": 1,
+          "updated_at": "2024-12-28T21:05:22-07:00",
+          "product_id": 8006863028359,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/2EFE481E-5495-4FBE-9D44-329137A22E5C.png?v=1735445122",
+          "width": 2270,
+          "height": 2065
+        },
+        {
+          "id": 33277947609223,
+          "created_at": "2024-12-17T19:34:08-07:00",
+          "position": 2,
+          "updated_at": "2024-12-17T19:34:09-07:00",
+          "product_id": 8006863028359,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/46E4F1C8-D28A-4533-9054-C77F5DE26219.jpg?v=1734489249",
+          "width": 1122,
+          "height": 904
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7923074924679,
+      "title": "Mirror Cube - Qiyi Mirror (Magnetic & Tiled)",
+      "handle": "mirror",
+      "body_html": "<p>The QiYi Mirror (Magnetic, Tiled) adds a fun twist to the classic 3x3!</p>\n<p>With factory-installed magnets, it offers smooth, accurate turning. The durable colored tiles replace vinyl stickers and are removable for color customization. This puzzle is perfect for cubers looking for a fresh challenge!</p>",
+      "published_at": "2024-11-03T19:37:35-07:00",
+      "created_at": "2024-11-03T19:37:35-07:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "Killer Cubes",
+      "product_type": "Mechanical Puzzles",
+      "tags": [],
+      "variants": [
+        {
+          "id": 42033910874247,
+          "title": "Black",
+          "option1": "Black",
+          "option2": null,
+          "option3": null,
+          "sku": "qiyimirror-1",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "9.95",
+          "grams": 157,
+          "compare_at_price": null,
+          "position": 2,
+          "product_id": 7923074924679,
+          "created_at": "2024-11-03T19:54:26-07:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        },
+        {
+          "id": 42033910907015,
+          "title": "Black (Blue)",
+          "option1": "Black (Blue)",
+          "option2": null,
+          "option3": null,
+          "sku": "qiyimirror-2",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "9.95",
+          "grams": 157,
+          "compare_at_price": null,
+          "position": 3,
+          "product_id": 7923074924679,
+          "created_at": "2024-11-03T19:54:26-07:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        },
+        {
+          "id": 42033910939783,
+          "title": "Green",
+          "option1": "Green",
+          "option2": null,
+          "option3": null,
+          "sku": "qiyimirror-3",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "9.95",
+          "grams": 157,
+          "compare_at_price": null,
+          "position": 4,
+          "product_id": 7923074924679,
+          "created_at": "2024-11-03T19:54:26-07:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 32877939163271,
+          "created_at": "2024-11-03T19:45:19-07:00",
+          "position": 1,
+          "updated_at": "2024-11-11T18:02:34-07:00",
+          "product_id": 7923074924679,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/D0A97571-7F39-4DE9-997F-224D50CB0747.jpg?v=1731373354",
+          "width": 1256,
+          "height": 1258
+        },
+        {
+          "id": 32877939196039,
+          "created_at": "2024-11-03T19:45:19-07:00",
+          "position": 2,
+          "updated_at": "2024-11-03T19:46:27-07:00",
+          "product_id": 7923074924679,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/8D3650F6-509C-42A3-9D85-37C12F60682F.jpg?v=1730688387",
+          "width": 2648,
+          "height": 1559
+        },
+        {
+          "id": 32877939097735,
+          "created_at": "2024-11-03T19:45:19-07:00",
+          "position": 3,
+          "updated_at": "2024-11-03T19:50:51-07:00",
+          "product_id": 7923074924679,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/163469B5-83E9-40C6-A7F2-01E69C819D1F.jpg?v=1730688651",
+          "width": 2781,
+          "height": 1741
+        },
+        {
+          "id": 32877939228807,
+          "created_at": "2024-11-03T19:45:19-07:00",
+          "position": 4,
+          "updated_at": "2024-11-11T18:03:37-07:00",
+          "product_id": 7923074924679,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/D965E85C-6362-48C5-86A1-EA64E3B167E5.jpg?v=1731373417",
+          "width": 1215,
+          "height": 1215
+        },
+        {
+          "id": 32877939064967,
+          "created_at": "2024-11-03T19:45:19-07:00",
+          "position": 5,
+          "updated_at": "2024-11-03T19:52:34-07:00",
+          "product_id": 7923074924679,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/9E243D31-7380-4E3B-A006-250F144E27F5.jpg?v=1730688754",
+          "width": 2163,
+          "height": 1323
+        }
+      ],
+      "options": [
+        {
+          "name": "Plastic Color",
+          "position": 1,
+          "values": [
+            "Black",
+            "Black (Blue)",
+            "Green"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7922879529095,
+      "title": "MoYu MeiLong 6x6 V2 (Magnetic)",
+      "handle": "moyu-meilong-6x6-v2-magnetic",
+      "body_html": "<p>The MoYu MeiLong 6x6 V2 (Magnetic) is a fantastic option for cubers looking for a quality 6x6 without a high price tag!</p>\n<p>With 144 factory-installed magnets, this puzzle delivers smooth and controlled turning with a satisfying \"click\" into place, enhancing accuracy and speed. Its updated color scheme boosts color recognition, while the lube storage piece design adds a nice touch for maintenance.</p>\n<p>This 6x6 is designed to be lightweight and stable, reducing lock-ups and binding, which is a plus for longer solves. Accessories include a display stand and a screwdriver, making it a complete package and a strong competitor in its price range!</p>",
+      "published_at": "2024-11-02T21:21:45-06:00",
+      "created_at": "2024-11-02T21:21:45-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "Killer Cubes",
+      "product_type": "",
+      "tags": [],
+      "variants": [
+        {
+          "id": 42032777527431,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "15.95",
+          "grams": 177,
+          "compare_at_price": "15.95",
+          "position": 1,
+          "product_id": 7922879529095,
+          "created_at": "2024-11-02T21:21:47-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 32963196125319,
+          "created_at": "2024-11-15T08:33:35-07:00",
+          "position": 1,
+          "updated_at": "2024-11-15T08:33:37-07:00",
+          "product_id": 7922879529095,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/B4350DC2-B5D2-48C6-9164-D182AB3D38CE.png?v=1731684817",
+          "width": 1603,
+          "height": 1273
+        },
+        {
+          "id": 32875047157895,
+          "created_at": "2024-11-02T21:27:00-06:00",
+          "position": 2,
+          "updated_at": "2024-11-02T21:35:52-06:00",
+          "product_id": 7922879529095,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/08874BC1-4C17-49FC-9432-C7794F7ABBAB.jpg?v=1730604952",
+          "width": 2896,
+          "height": 1572
+        },
+        {
+          "id": 32875046862983,
+          "created_at": "2024-11-02T21:26:30-06:00",
+          "position": 3,
+          "updated_at": "2024-11-02T21:38:35-06:00",
+          "product_id": 7922879529095,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/A2CE274D-B740-46C8-9834-33F1BAA69D78.jpg?v=1730605115",
+          "width": 2037,
+          "height": 1785
+        },
+        {
+          "id": 32875046830215,
+          "created_at": "2024-11-02T21:26:30-06:00",
+          "position": 4,
+          "updated_at": "2024-11-02T21:43:17-06:00",
+          "product_id": 7922879529095,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/D53E3FB4-5522-48CA-A89D-8C13D8746D41.jpg?v=1730605397",
+          "width": 1512,
+          "height": 1205
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7922876055687,
+      "title": "Square 1 Cube - YJ MGC Square-1 (Fully Magnetic)",
+      "handle": "yj-mgc-square-1-fully-magnetic-1",
+      "body_html": "<p>The YJ MGC Square-1 definitely lives up to the hype and brings some great features for speedcubers! Its lightweight yet sturdy feel, with most of the weight concentrated at the center, makes it highly controllable. The inner and outer layers glide smoothly thanks to factory-installed magnets with a moderate pull, giving it a satisfying, stable feel during turns.</p>\n<p>Plus, for those who prefer a black side, it\u2019s easy to swap in the included spare black pieces to customize either the white or yellow side. We recommend tightening it slightly out of the box for the best performance.</p>\n<p>With its thoughtful design and extras like a screwdriver and solve guide, the MGC Square-1 is definitely positioned to be a top choice for Square-1 enthusiasts.</p>",
+      "published_at": "2024-11-02T19:59:42-06:00",
+      "created_at": "2024-11-02T19:59:42-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "YJ",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "square-1"
+      ],
+      "variants": [
+        {
+          "id": 42032749314183,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "yjmgcsquare-1",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "19.95",
+          "grams": 232,
+          "compare_at_price": "19.95",
+          "position": 1,
+          "product_id": 7922876055687,
+          "created_at": "2024-11-02T19:59:43-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 32877954859143,
+          "created_at": "2024-11-03T20:09:59-07:00",
+          "position": 1,
+          "updated_at": "2024-11-11T18:00:07-07:00",
+          "product_id": 7922876055687,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/0311EC23-A730-4F09-B981-4A31A4C0148A.png?v=1731373207",
+          "width": 1003,
+          "height": 1032
+        },
+        {
+          "id": 32875036639367,
+          "created_at": "2024-11-02T21:20:23-06:00",
+          "position": 2,
+          "updated_at": "2024-11-02T21:31:33-06:00",
+          "product_id": 7922876055687,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/IMG-4596.heic?v=1730604693",
+          "width": 3192,
+          "height": 1777
+        },
+        {
+          "id": 32875036606599,
+          "created_at": "2024-11-02T21:20:23-06:00",
+          "position": 3,
+          "updated_at": "2024-11-02T21:34:44-06:00",
+          "product_id": 7922876055687,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/IMG-4595.heic?v=1730604884",
+          "width": 2280,
+          "height": 1792
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7827128451207,
+      "title": "GAN Skewb Magnetic (Enhanced)",
+      "handle": "gan-skewb-magnetic-enhanced",
+      "body_html": "<p>The Gan Skewb Magnetic (Enhanced) is expertly designed for speedcubing enthusiasts and professionals. With its precision magnetic system, it offers enhanced control and stability, resulting in faster solve times and improved performance. Take your skills to the next level with this top-of-the-line skewb puzzle.</p>\n<p>\u00a0</p>\n<!---->",
+      "published_at": "2024-06-28T19:49:02-06:00",
+      "created_at": "2024-06-28T19:49:02-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "GAN",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "skewb"
+      ],
+      "variants": [
+        {
+          "id": 41714180751495,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "skewbgan",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "31.95",
+          "grams": 82,
+          "compare_at_price": "31.95",
+          "position": 2,
+          "product_id": 7827128451207,
+          "created_at": "2024-06-28T19:49:04-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 32070432260231,
+          "created_at": "2024-06-28T19:44:33-06:00",
+          "position": 1,
+          "updated_at": "2024-06-28T19:44:34-06:00",
+          "product_id": 7827128451207,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/745A764D-CF66-4BB2-AE38-8DD700A79004_2024-06-29T01_44_27.397Z.png?v=1719625474",
+          "width": 536,
+          "height": 536
+        },
+        {
+          "id": 32070432194695,
+          "created_at": "2024-06-28T19:31:00-06:00",
+          "position": 2,
+          "updated_at": "2024-06-28T19:31:01-06:00",
+          "product_id": 7827128451207,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/B4FDA405-72CC-47CF-96DB-C185E831CBCE_2024-06-29T01_30_54.420Z.png?v=1719624661",
+          "width": 1024,
+          "height": 769
+        },
+        {
+          "id": 32070432227463,
+          "created_at": "2024-06-28T19:48:46-06:00",
+          "position": 3,
+          "updated_at": "2024-06-28T19:48:48-06:00",
+          "product_id": 7827128451207,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/IMG_2024-06-29T01_48_39.133Z.png?v=1719625728",
+          "width": 4032,
+          "height": 3024
+        },
+        {
+          "id": 32070432292999,
+          "created_at": "2024-06-28T19:45:57-06:00",
+          "position": 4,
+          "updated_at": "2024-06-28T19:45:59-06:00",
+          "product_id": 7827128451207,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/D716460D-BF95-4438-85A3-1A4727B5B02C_2024-06-29T01_45_51.786Z.png?v=1719625559",
+          "width": 517,
+          "height": 517
+        },
+        {
+          "id": 32070432325767,
+          "created_at": "2024-06-28T19:42:39-06:00",
+          "position": 5,
+          "updated_at": "2024-06-28T19:42:40-06:00",
+          "product_id": 7827128451207,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/F0898987-2C80-4F0A-91E7-C0D585B000F8_2024-06-29T01_42_33.143Z.png?v=1719625360",
+          "width": 1802,
+          "height": 1802
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7827082608775,
+      "title": "QiYi Smart Timer (Bluetooth)",
+      "handle": "qiyi-smart-timer-bluetooth",
+      "body_html": "<p>The Qiyi Smart Timer is perfect timer for any cubing needs, and the best part is that is can connect to your phone and keep track of your times!</p>\n<div class=\"rte expanded\">\n<b>Key features</b>\n<ul>\n<li>2.5mm auxiliary output</li>\n<li>Cloud storage</li>\n<li>\u00a0Mobile app</li>\n<li>Smaller-sized indicator lights to minimize distractions</li>\n</ul>\n<b>Functionality</b>\n<ul>\n<li>Automatically calculates the rolling average of five and twelve</li>\n<li>Real-time synchronization with mobile app</li>\n</ul>\n<b>Accessories included</b>\n<ul>\n<li>Phone stand</li>\n</ul>\n</div>\n<div class=\"shopify-section product-banner-sections col-12\" id=\"shopify-section-product-banner\"></div>\n<!---->",
+      "published_at": "2024-06-28T18:05:29-06:00",
+      "created_at": "2024-06-28T18:05:29-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "QiYi",
+      "product_type": "SpeedCubing Timer",
+      "tags": [
+        "Timer"
+      ],
+      "variants": [
+        {
+          "id": 41714025824391,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "QiYismarttimer",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "19.95",
+          "grams": 88,
+          "compare_at_price": "19.95",
+          "position": 2,
+          "product_id": 7827082608775,
+          "created_at": "2024-06-28T18:05:31-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 32072790409351,
+          "created_at": "2024-06-29T09:15:00-06:00",
+          "position": 1,
+          "updated_at": "2024-06-29T09:15:18-06:00",
+          "product_id": 7827082608775,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/IMG_2024-06-29T15_14_58.936Z.png?v=1719674118",
+          "width": 3449,
+          "height": 2575
+        },
+        {
+          "id": 32070215008391,
+          "created_at": "2024-06-28T18:01:24-06:00",
+          "position": 2,
+          "updated_at": "2024-06-30T11:32:09-06:00",
+          "product_id": 7827082608775,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/IMG_2024-06-29T00_01_18.386Z.png?v=1719768729",
+          "width": 3970,
+          "height": 2962
+        },
+        {
+          "id": 32070215041159,
+          "created_at": "2024-06-28T18:01:50-06:00",
+          "position": 3,
+          "updated_at": "2024-06-28T18:01:53-06:00",
+          "product_id": 7827082608775,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/IMG_2024-06-29T00_01_44.701Z.png?v=1719619313",
+          "width": 4032,
+          "height": 3024
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7827054690439,
+      "title": "Pyraminx - YuXin Little Magic Magnetic",
+      "handle": "pyraminx-yuxin-little-magic-magnetic",
+      "body_html": "<p>The Yuxin Little Magic Magnetic Pryaminx is the perfect Pyraminx for any SpeedCuber!</p>\n<p><strong>Key Features</strong><br></p>\n<ul>\n<li>Magnetic Stability: Built-in magnets provide a stable and satisfying solving experience.<br>\n</li>\n<li>Smooth Turning: High-quality mechanisms ensure effortless corner-cutting and rotations.<br>\n</li>\n<li>Durable Build: Made from robust materials for long-lasting performance.<br>\n</li>\n<li>Compact and Lightweight: Perfect for on-the-go cubing and easy handling.</li>\n</ul>\n<!---->",
+      "published_at": "2024-06-28T17:28:44-06:00",
+      "created_at": "2024-06-28T17:28:44-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "Yuxin",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "pyraminx"
+      ],
+      "variants": [
+        {
+          "id": 41713923883143,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "pyraminxyuxin",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "8.95",
+          "grams": 101,
+          "compare_at_price": "8.95",
+          "position": 2,
+          "product_id": 7827054690439,
+          "created_at": "2024-06-28T17:28:46-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 32070145900679,
+          "created_at": "2024-06-28T17:37:17-06:00",
+          "position": 1,
+          "updated_at": "2024-06-28T17:44:32-06:00",
+          "product_id": 7827054690439,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/IMG_3424.jpg?v=1719618272",
+          "width": 1810,
+          "height": 1810
+        },
+        {
+          "id": 32070145867911,
+          "created_at": "2024-06-28T17:37:17-06:00",
+          "position": 2,
+          "updated_at": "2024-06-28T17:44:19-06:00",
+          "product_id": 7827054690439,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/IMG_3423.jpg?v=1719618259",
+          "width": 2029,
+          "height": 2029
+        },
+        {
+          "id": 32070145933447,
+          "created_at": "2024-06-28T17:37:17-06:00",
+          "position": 3,
+          "updated_at": "2024-06-30T11:42:53-06:00",
+          "product_id": 7827054690439,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/IMG_3422.jpg?v=1719769373",
+          "width": 2424,
+          "height": 2424
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7792502603911,
+      "title": "$25 Used Mystery Puzzle",
+      "handle": "25-used-mystery-puzzle",
+      "body_html": "<p><meta charset=\"utf-8\">This $25 mystery puzzle is a used puzzle that is guaranteed to have a retail value more than $25.</p>\n<!---->",
+      "published_at": "2024-06-03T19:46:36-06:00",
+      "created_at": "2024-06-03T19:46:36-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "Killer Cubes",
+      "product_type": "Mechanical Puzzles",
+      "tags": [],
+      "variants": [
+        {
+          "id": 41611321933959,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "$25usedmysterypuzzle",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": false,
+          "price": "25.00",
+          "grams": 0,
+          "compare_at_price": null,
+          "position": 2,
+          "product_id": 7792502603911,
+          "created_at": "2024-06-03T19:46:37-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 31918756790407,
+          "created_at": "2024-06-03T19:47:06-06:00",
+          "position": 1,
+          "updated_at": "2024-06-03T19:47:39-06:00",
+          "product_id": 7792502603911,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/download_650a7fdc-1893-4297-b79e-77280bcd7c36.jpg?v=1717465659",
+          "width": 225,
+          "height": 225
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7792395616391,
+      "title": "$3 Used Mystery Puzzle",
+      "handle": "3-used-mystery-puzzle",
+      "body_html": "<p>This $3 mystery puzzle is a used puzzle that is guaranteed to have a retail value more than $3.</p>\n<!---->",
+      "published_at": "2024-06-03T15:20:29-06:00",
+      "created_at": "2024-06-03T15:20:29-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "Killer Cubes",
+      "product_type": "Mechanical Puzzles",
+      "tags": [],
+      "variants": [
+        {
+          "id": 41610991468679,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "$3usedmysterypuzzle",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "3.00",
+          "grams": 0,
+          "compare_at_price": null,
+          "position": 2,
+          "product_id": 7792395616391,
+          "created_at": "2024-06-03T15:20:30-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 31918321729671,
+          "created_at": "2024-06-03T15:08:34-06:00",
+          "position": 1,
+          "updated_at": "2024-06-03T15:08:36-06:00",
+          "product_id": 7792395616391,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/download.jpg?v=1717448916",
+          "width": 225,
+          "height": 225
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7785893560455,
+      "title": "Abstract KillerCubes Mat",
+      "handle": "abstract-killercubes-mat",
+      "body_html": "<p>Enhance your cubing experience with the Abstract KillerCubes Mat. Add a touch of abstract design to your session. Crafted with high-quality materials, this mat is perfect for SpeedCubing and guarantees keeping your SpeedCubes safe from scratches. Take your cubing game to the next level with this unique and stylish mat.</p>\n<!---->",
+      "published_at": "2024-06-02T16:30:20-06:00",
+      "created_at": "2024-05-31T19:10:28-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "Killer Cubes",
+      "product_type": "Mouse pad",
+      "tags": [],
+      "variants": [
+        {
+          "id": 41590105538695,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "abstractKCmat",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "4.99",
+          "grams": 142,
+          "compare_at_price": "4.99",
+          "position": 2,
+          "product_id": 7785893560455,
+          "created_at": "2024-05-31T19:10:29-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 31954339758215,
+          "created_at": "2024-06-09T20:17:39-06:00",
+          "position": 1,
+          "updated_at": "2024-06-09T20:19:33-06:00",
+          "product_id": 7785893560455,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/FD1BE1B4-DEF7-48C3-81DD-1DA4E7A6F461.heic?v=1717985973",
+          "width": 2619,
+          "height": 2176
+        },
+        {
+          "id": 31911601209479,
+          "created_at": "2024-06-02T16:10:05-06:00",
+          "position": 2,
+          "updated_at": "2024-06-09T20:18:34-06:00",
+          "product_id": 7785893560455,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/Untitleddesign_1.png?v=1717985914",
+          "width": 2000,
+          "height": 1615
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7517182460039,
+      "title": "KillerCubes eGift Cards",
+      "handle": "25-killercubes-gift-card",
+      "body_html": "<p>Discover the art of thoughtful gifting with our $10, $25, $50, and $100 gift cards! Delight your friends and family by giving them the freedom to choose their perfect present. Whether it's a 3x3 or larger cubes like our YJ MGC 7x7's, these gift cards unlock a world of possibilities. The gift of choice awaits!</p>",
+      "published_at": "2024-01-20T18:10:46-07:00",
+      "created_at": "2024-01-20T18:07:04-07:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "Killer Cubes",
+      "product_type": "",
+      "tags": [],
+      "variants": [
+        {
+          "id": 41547123196039,
+          "title": "$10.00",
+          "option1": "$10.00",
+          "option2": null,
+          "option3": null,
+          "sku": "",
+          "requires_shipping": false,
+          "taxable": false,
+          "featured_image": null,
+          "available": true,
+          "price": "10.00",
+          "grams": 0,
+          "compare_at_price": null,
+          "position": 1,
+          "product_id": 7517182460039,
+          "created_at": "2024-05-26T19:57:55-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        },
+        {
+          "id": 40857796051079,
+          "title": "$25.00",
+          "option1": "$25.00",
+          "option2": null,
+          "option3": null,
+          "sku": "",
+          "requires_shipping": false,
+          "taxable": false,
+          "featured_image": null,
+          "available": true,
+          "price": "25.00",
+          "grams": 0,
+          "compare_at_price": null,
+          "position": 2,
+          "product_id": 7517182460039,
+          "created_at": "2024-01-20T18:07:04-07:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        },
+        {
+          "id": 40857796083847,
+          "title": "$50.00",
+          "option1": "$50.00",
+          "option2": null,
+          "option3": null,
+          "sku": "",
+          "requires_shipping": false,
+          "taxable": false,
+          "featured_image": null,
+          "available": true,
+          "price": "50.00",
+          "grams": 0,
+          "compare_at_price": null,
+          "position": 3,
+          "product_id": 7517182460039,
+          "created_at": "2024-01-20T18:07:04-07:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        },
+        {
+          "id": 40857879117959,
+          "title": "$100.00",
+          "option1": "$100.00",
+          "option2": null,
+          "option3": null,
+          "sku": "",
+          "requires_shipping": false,
+          "taxable": false,
+          "featured_image": null,
+          "available": true,
+          "price": "100.00",
+          "grams": 0,
+          "compare_at_price": null,
+          "position": 4,
+          "product_id": 7517182460039,
+          "created_at": "2024-01-20T21:59:32-07:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        },
+        {
+          "id": 41860151935111,
+          "title": "$15.00",
+          "option1": "$15.00",
+          "option2": null,
+          "option3": null,
+          "sku": "",
+          "requires_shipping": false,
+          "taxable": false,
+          "featured_image": null,
+          "available": true,
+          "price": "10.00",
+          "grams": 0,
+          "compare_at_price": null,
+          "position": 5,
+          "product_id": 7517182460039,
+          "created_at": "2024-08-17T14:27:02-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 31857716134023,
+          "created_at": "2024-05-26T21:04:17-06:00",
+          "position": 1,
+          "updated_at": "2024-05-26T21:04:19-06:00",
+          "product_id": 7517182460039,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/Gift_Cards.png?v=1716779059",
+          "width": 1545,
+          "height": 2000
+        },
+        {
+          "id": 31857556947079,
+          "created_at": "2024-05-26T19:59:29-06:00",
+          "position": 2,
+          "updated_at": "2024-05-26T21:04:30-06:00",
+          "product_id": 7517182460039,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/10.png?v=1716779070",
+          "width": 1050,
+          "height": 600
+        },
+        {
+          "id": 31026085822599,
+          "created_at": "2024-01-20T18:10:49-07:00",
+          "position": 3,
+          "updated_at": "2024-05-26T21:04:30-06:00",
+          "product_id": 7517182460039,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/IMG-1700.png?v=1716779070",
+          "width": 1050,
+          "height": 600
+        },
+        {
+          "id": 31026085789831,
+          "created_at": "2024-01-20T18:10:49-07:00",
+          "position": 4,
+          "updated_at": "2024-05-26T21:04:30-06:00",
+          "product_id": 7517182460039,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/IMG-1703.png?v=1716779070",
+          "width": 1050,
+          "height": 600
+        },
+        {
+          "id": 31026504892551,
+          "created_at": "2024-01-20T21:59:29-07:00",
+          "position": 5,
+          "updated_at": "2024-05-26T21:04:30-06:00",
+          "product_id": 7517182460039,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/IMG-1716.png?v=1716779070",
+          "width": 1050,
+          "height": 600
+        }
+      ],
+      "options": [
+        {
+          "name": "Denominations",
+          "position": 1,
+          "values": [
+            "$10.00",
+            "$25.00",
+            "$50.00",
+            "$100.00",
+            "$15.00"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6746989985927,
+      "title": "Megaminx - YJ Yuhu V2 Magnetic Megaminx",
+      "handle": "yj-yuhu-v2-magnetic-megaminx",
+      "body_html": "<p>\u00a0</p>\n<p data-mce-fragment=\"1\">The YJ Yuhu V2 Magnetic Megaminx is a state-of-the-art puzzle designed for enthusiasts and speedcubers looking to challenge their solving skills with a magnetic twist. Created by YJ (YongJun), a reputable name in the speedcubing community, the Yuhu V2 Magnetic Megaminx is part of the Yuhu series, known for its innovation and performance.</p>\n<p data-mce-fragment=\"1\">Featuring a magnetic mechanism, the Yuhu V2 Megaminx enhances stability and precision during solves. The strategically placed magnets provide a subtle but effective tactile feel, aiding cubers in maintaining control and accuracy while navigating the complex movements of the Megaminx puzzle. The magnetic alignment contributes to smoother turns and reduces the likelihood of misalignments, ensuring a more enjoyable solving experience.</p>\n<p data-mce-fragment=\"1\">Designed with vibrant stickerless shades, the Yuhu V2 Magnetic Megaminx is not only a high-performance puzzle but also a visually appealing one. The cube's sleek design and attention to detail make it a popular choice among cubers who appreciate both form and function.</p>\n<p data-mce-fragment=\"1\">Whether you're a seasoned Megaminx solver or a curious cuber looking to expand your puzzle collection, the YJ Yuhu V2 Magnetic Megaminx offers a combination of magnetic precision, smooth turning, and aesthetic appeal for an engaging and satisfying solving experience. Elevate your Megaminx solving skills with this innovative and well-crafted puzzle from YJ.</p>",
+      "published_at": "2023-12-13T19:57:44-07:00",
+      "created_at": "2022-08-18T16:46:08-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "YJ",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "megaminx"
+      ],
+      "variants": [
+        {
+          "id": 40052270071943,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "megaminxyjyuhu",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "12.95",
+          "grams": 136,
+          "compare_at_price": "12.95",
+          "position": 1,
+          "product_id": 6746989985927,
+          "created_at": "2022-08-18T16:46:08-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 30886607388807,
+          "created_at": "2023-12-13T19:57:49-07:00",
+          "position": 1,
+          "updated_at": "2023-12-13T19:57:50-07:00",
+          "product_id": 6746989985927,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/B4899D67-62A9-4DB2-9B9A-78F050E43117.jpg?v=1702522670",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 30886607356039,
+          "created_at": "2023-12-13T19:57:49-07:00",
+          "position": 2,
+          "updated_at": "2023-12-13T19:57:50-07:00",
+          "product_id": 6746989985927,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/EB9C6B03-4DDD-4B2D-B02A-6FD8586F2962.jpg?v=1702522670",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 30886607454343,
+          "created_at": "2023-12-13T19:57:49-07:00",
+          "position": 3,
+          "updated_at": "2024-05-30T13:13:40-06:00",
+          "product_id": 6746989985927,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/CC29FF77-8CA6-49DE-889B-AD2FCA2B382F.jpg?v=1717096420",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 30886607421575,
+          "created_at": "2023-12-13T19:57:49-07:00",
+          "position": 4,
+          "updated_at": "2023-12-13T19:57:50-07:00",
+          "product_id": 6746989985927,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/5CBA45D6-B58F-48E5-9FE4-A595684DB7BF.jpg?v=1702522670",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7495005601927,
+      "title": "3x3 Speed Cube - Moyu Meilong",
+      "handle": "3x3-speed-cube-moyu-meilong-magnetic",
+      "body_html": "<p>\u00a0</p>\n<div class=\"flex-1 overflow-hidden\">\n<div class=\"react-scroll-to-bottom--css-gogxb-79elbk h-full\">\n<div class=\"react-scroll-to-bottom--css-gogxb-1n7m0yu\">\n<div class=\"flex flex-col pb-9 text-sm\">\n<div data-testid=\"conversation-turn-5\" class=\"w-full text-token-text-primary\">\n<div class=\"px-4 py-2 justify-center text-base md:gap-6 m-auto\">\n<div class=\"flex flex-1 text-base mx-auto gap-3 md:px-5 lg:px-1 xl:px-5 md:max-w-3xl lg:max-w-[40rem] xl:max-w-[48rem] } group final-completion\">\n<div class=\"relative flex w-full flex-col lg:w-[calc(100%-115px)] agent-turn\">\n<div class=\"flex-col gap-1 md:gap-3\">\n<div class=\"flex flex-grow flex-col max-w-full\">\n<div class=\"min-h-[20px] text-message flex flex-col items-start gap-3 whitespace-pre-wrap break-words [.text-message+&amp;]:mt-5 overflow-x-auto\" data-message-id=\"86c97b94-28c9-42c1-af1e-cd2f077d9585\" data-message-author-role=\"assistant\">\n<div class=\"markdown prose w-full break-words dark:prose-invert dark\">\n<p>The Moyu Meilong Magnetic 3x3 is a top-tier speed cube that combines cutting-edge design with magnetic precision to deliver an exceptional solving experience. Crafted by Moyu, a leading name in the world of speedcubing, the Meilong Magnetic 3x3 is part of the Meilong series known for its affordability without compromising on performance.</p>\n<p>This 3x3 speed cube is equipped with a magnetic positioning system, enhancing stability and control during solves. The magnets are strategically placed to provide a noticeable yet subtle tactile feedback, allowing for precise turning and reducing the likelihood of misalignments or lockups. This feature is especially beneficial for both beginners and advanced cubers, promoting smoother and more accurate solving sessions.</p>\n<p>The Meilong Magnetic 3x3 boasts a sleek and minimalist design, featuring Moyu's vibrant stickerless color scheme for easy color recognition. The cube's smooth turning and excellent corner-cutting capabilities contribute to a seamless solving experience, enabling cubers to execute algorithms with speed and efficiency.</p>\n<p>Whether you're a speedcubing enthusiast aiming for faster solve times or a casual solver looking for an affordable yet high-quality cube, the Moyu Meilong Magnetic 3x3 is an excellent choice. Its combination of magnetic stability, smooth turning, and budget-friendly price point make it a popular option for cubers of all skill levels. Elevate your cubing journey with the Moyu Meilong Magnetic 3x3, where innovation meets affordability for a truly enjoyable solving experience.</p>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>",
+      "published_at": "2023-12-13T19:57:03-07:00",
+      "created_at": "2023-12-10T15:17:09-07:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "MoYu",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "3x3"
+      ],
+      "variants": [
+        {
+          "id": 40754605293703,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "3x3moyumeilong",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "6.95",
+          "grams": 65,
+          "compare_at_price": "6.95",
+          "position": 1,
+          "product_id": 7495005601927,
+          "created_at": "2023-12-10T15:17:10-07:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 30886607028359,
+          "created_at": "2023-12-13T19:57:06-07:00",
+          "position": 1,
+          "updated_at": "2023-12-13T19:57:07-07:00",
+          "product_id": 7495005601927,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/6EE73787-7FC1-4575-AEA5-4F55EA5A72CF.jpg?v=1702522627",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 30886607093895,
+          "created_at": "2023-12-13T19:57:06-07:00",
+          "position": 2,
+          "updated_at": "2023-12-13T19:57:08-07:00",
+          "product_id": 7495005601927,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/C6F2D3A0-36F6-4817-9020-DC68CE097E00.jpg?v=1702522628",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 30886607061127,
+          "created_at": "2023-12-13T19:57:06-07:00",
+          "position": 3,
+          "updated_at": "2023-12-13T19:57:07-07:00",
+          "product_id": 7495005601927,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/E864DEA8-ADC6-47D1-9D3E-CFE62BB28734.jpg?v=1702522627",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7495005438087,
+      "title": "2x2 Speed Cube - YJ MGC Magnetic",
+      "handle": "2x2-speed-cube-yj-mgc-magnetic",
+      "body_html": "<p>\u00a0</p>\n<p>The YJ MGC Magnetic 2x2 is a high-performance speed cube designed for enthusiasts and competitive cubers seeking precision and speed in their solves. Manufactured by YJ (YongJun), a renowned name in the speedcubing community, the MGC Magnetic 2x2 is part of the MGC series known for its innovative designs and excellent performance.</p>\n<p>This 2x2 speed cube is equipped with a magnetic mechanism, enhancing stability and control during solves. The incorporation of magnets allows for consistent and smooth turning, reducing the likelihood of lockups and ensuring a more enjoyable solving experience. The magnets provide a tactile feel, assisting cubers in maintaining control and accuracy while executing algorithms.</p>\n<p>The cube features a sleek and modern design, with vibrant stickerless shades that facilitate easy recognition of colors during solves. The smooth turning and corner-cutting capabilities of the YJ MGC Magnetic 2x2 contribute to faster solving times and increased overall efficiency.</p>\n<p>Whether you are a speedcubing competitor or a casual solver looking to upgrade your cube, the YJ MGC Magnetic 2x2 stands out as a reliable and high-performing choice. Its combination of magnetic stability, smooth turning, and eye-catching design make it a popular option among cubers of all skill levels. Embrace precision and speed with the YJ MGC Magnetic 2x2 for an enhanced cubing experience.</p>\n<!---->",
+      "published_at": "2023-12-13T19:56:39-07:00",
+      "created_at": "2023-12-10T15:11:31-07:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "YJ",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "2x2"
+      ],
+      "variants": [
+        {
+          "id": 40754603262087,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "2x2yjmgc",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "9.95",
+          "grams": 65,
+          "compare_at_price": "9.95",
+          "position": 1,
+          "product_id": 7495005438087,
+          "created_at": "2023-12-10T15:11:32-07:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 30886607585415,
+          "created_at": "2023-12-13T19:58:34-07:00",
+          "position": 1,
+          "updated_at": "2023-12-13T19:58:35-07:00",
+          "product_id": 7495005438087,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/48ECAF07-9BCF-44E5-8EA0-0F0B3EE90B79.jpg?v=1702522715",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 30886607519879,
+          "created_at": "2023-12-13T19:58:34-07:00",
+          "position": 2,
+          "updated_at": "2023-12-13T19:58:35-07:00",
+          "product_id": 7495005438087,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/1531EBBA-85EF-41A3-98AE-1A0B29CA065E.jpg?v=1702522715",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 30886607618183,
+          "created_at": "2023-12-13T19:58:34-07:00",
+          "position": 3,
+          "updated_at": "2024-05-30T13:11:40-06:00",
+          "product_id": 7495005438087,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/C7B88510-0985-46D0-AE2F-C0CA530E6EDD.jpg?v=1717096300",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 30886607552647,
+          "created_at": "2023-12-13T19:58:34-07:00",
+          "position": 4,
+          "updated_at": "2024-05-30T13:13:01-06:00",
+          "product_id": 7495005438087,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/6C4FC451-1F93-4994-89EF-1566EBAE3B82.jpg?v=1717096381",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6797462929543,
+      "title": "3x3 Speed Cube - MOYU RS3 M 2020",
+      "handle": "moyu-rs3-m-2020-3x3",
+      "body_html": "<h2 class=\"text-lg font-bold\">3x3 Speed Cube - MOYU RS3 M 2020</h2>\n<h3 class=\"text-lg font-bold\">Unlock Your Potential with the MOYU RS3 M 2020 3x3 Speed Cube</h3>\n<p class=\"my-0.5\">If you're looking for a reliable and efficient speed cube that can withstand the rigors of speed solving, then you need to check out the MOYU RS3 M 2020. This high-performance 3x3 cube is perfect for both beginner and advanced cubers, featuring a redesigned mechanism and improved corner cutting for faster and smoother turning. It's made of durable, high-quality materials that ensure its longevity, while its frosted surface provides excellent grip, making it easy to hold and manipulate.</p>\n<p class=\"my-0.5\">The weight of the MOYU RS3 M 2020 3x3 cube is approximately 80 grams - a relatively standard weight for such cubes - which provides good balance between speed and stability. Depending on your personal preference and solving style, some cubers may prefer a lighter cube for faster turning or a heavier cube for more stability and control. Either way, the MOYU RS3 M 2020 will provide everything you need to improve your speed solving skills!</p>",
+      "published_at": "2023-12-13T16:41:11-07:00",
+      "created_at": "2022-09-25T12:15:42-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "MoYu",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "3x3"
+      ],
+      "variants": [
+        {
+          "id": 40161902100615,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "MOYURS3M2020",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "8.95",
+          "grams": 84,
+          "compare_at_price": "8.95",
+          "position": 1,
+          "product_id": 6797462929543,
+          "created_at": "2022-09-25T12:15:42-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 29758032216199,
+          "created_at": "2022-09-25T13:00:51-06:00",
+          "position": 1,
+          "updated_at": "2024-06-02T16:26:25-06:00",
+          "product_id": 6797462929543,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/moyu-rs3-m-2020-1.jpg?v=1717367185",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29758032445575,
+          "created_at": "2022-09-25T13:00:51-06:00",
+          "position": 2,
+          "updated_at": "2024-06-02T16:26:25-06:00",
+          "product_id": 6797462929543,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/moyu-rs3-m-2020-6.jpg?v=1717367185",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29758032609415,
+          "created_at": "2022-09-25T13:00:51-06:00",
+          "position": 3,
+          "updated_at": "2024-06-02T16:26:25-06:00",
+          "product_id": 6797462929543,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/moyu-rs3-m-2020-5.jpg?v=1717367185",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29758032347271,
+          "created_at": "2022-09-25T13:00:51-06:00",
+          "position": 4,
+          "updated_at": "2022-09-25T13:00:58-06:00",
+          "product_id": 6797462929543,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/moyu-rs3-m-2020-4.jpg?v=1664132458",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29758032478343,
+          "created_at": "2022-09-25T13:00:51-06:00",
+          "position": 5,
+          "updated_at": "2022-09-25T13:00:58-06:00",
+          "product_id": 6797462929543,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/moyu-rs3-m-2020-3.jpg?v=1664132458",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29758032314503,
+          "created_at": "2022-09-25T13:00:51-06:00",
+          "position": 6,
+          "updated_at": "2022-09-25T13:00:58-06:00",
+          "product_id": 6797462929543,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/moyu-rs3-m-2020-2.jpg?v=1664132458",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6797462044807,
+      "title": "2X2 Speed Cube - GAN 251 V2",
+      "handle": "gan-251-v2-2x2",
+      "body_html": "<meta charset=\"utf-8\"><meta charset=\"utf-8\">\n<h2 class=\"text-lg font-bold\" data-mce-fragment=\"1\">2X2 Speed Cube - GAN 251 V2</h2>\n<h3 class=\"text-lg font-bold\" data-mce-fragment=\"1\">Experience the Power of GAN 251 V2 2x2 Speed Cube</h3>\n<span data-mce-fragment=\"1\"> </span>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">If you're looking for an awesome speed cubing puzzle, look no further than the GAN 251 V2 2x2. This high-quality cube features a sleek, ergonomic design and smooth turning mechanism that make even the most difficult puzzles simpler to solve. With its updated version 2 magnets and GAN's advanced engineering, this cube offers unmatched stability and precision - perfect for any beginner or experienced speedcuber.</p>\n<span data-mce-fragment=\"1\"> </span>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">The GAN 251 V2 2x2 Speed Cube has been designed with durability in mind, so you can trust that it will last through all your cubing adventures. It's lightweight yet powerful construction allows it to sail through your fastest solves without sacrificing accuracy or control. Plus, the included magnet technology helps generate tight corner functions to increase overall performance without adding extra bulk.</p>\n<span data-mce-fragment=\"1\"> </span>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">Whether you're a beginner or an experienced cubist, the GAN 251 V2 2x2 is sure to become one of your go-to cubes in your collection. Save time and effort while solving your favorite puzzles with this world-class speed cube from GAN!</p>\n<br>",
+      "published_at": "2022-09-25T12:14:09-06:00",
+      "created_at": "2022-09-25T12:14:08-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "GAN",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "2x2"
+      ],
+      "variants": [
+        {
+          "id": 40161896890503,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "GAN251V2",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "16.95",
+          "grams": 57,
+          "compare_at_price": "16.95",
+          "position": 1,
+          "product_id": 6797462044807,
+          "created_at": "2022-09-25T12:14:08-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 29758033559687,
+          "created_at": "2022-09-25T13:01:15-06:00",
+          "position": 1,
+          "updated_at": "2022-09-25T13:01:22-06:00",
+          "product_id": 6797462044807,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/gan-251-v2-1.jpg?v=1664132482",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29758033526919,
+          "created_at": "2022-09-25T13:01:15-06:00",
+          "position": 2,
+          "updated_at": "2022-09-25T13:01:22-06:00",
+          "product_id": 6797462044807,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/gan-251-v2-4.jpg?v=1664132482",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29758033395847,
+          "created_at": "2022-09-25T13:01:15-06:00",
+          "position": 3,
+          "updated_at": "2022-09-25T13:01:22-06:00",
+          "product_id": 6797462044807,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/gan-251-v2-3.jpg?v=1664132482",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29758033363079,
+          "created_at": "2022-09-25T13:01:15-06:00",
+          "position": 4,
+          "updated_at": "2022-09-25T13:01:22-06:00",
+          "product_id": 6797462044807,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/gan-251-v2-2.jpg?v=1664132482",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6746995425415,
+      "title": "Stardust Speed Cube Lubricant 5ml",
+      "handle": "stardust",
+      "body_html": "<div class=\"tabs__product-page horizontal-tabs\" data-mce-fragment=\"1\">\n<div class=\"wrapper-tab-content\" data-mce-fragment=\"1\">\n<div id=\"collapse-tab1\" data-tabcontent=\"\" class=\"tab-content active\" data-mce-fragment=\"1\">\n<div class=\"rte\" data-mce-fragment=\"1\">\n<h2 class=\"text-lg font-bold\">Stardust Speed Cube Lubricant 5ml</h2>\n<h3 class=\"text-lg font-bold\">Reach Your Fastest Times With Stardust Speed Cube Lubricant</h3>\n<p class=\"my-0.5\">Are you looking to take your solving skills to the next level? Then you need Stardust Speed Cube Lubricant at your fingertips! This high-quality lubricant is designed specifically for speed cubes, also known as Rubik's Cubes. It is formulated to provide a smooth and consistent feel while turning the cube, allowing for faster and more efficient solving.</p>\n<p class=\"my-0.5\">What's more, applying this lubricant is incredibly easy\u2014simply shake a small amount onto the cube and spread it evenly with a cloth or sponge. And because it's long-lasting, you can trust that your cube will remain properly lubricated for longer periods of time. So if you're looking to achieve your fastest times yet, make sure to pick up a bottle of Stardust Speed Cube Lubricant!</p>\n<p data-mce-fragment=\"1\"><strong data-mce-fragment=\"1\"><span data-mce-fragment=\"1\"></span></strong><span data-mce-fragment=\"1\">Recommended for:\u00a0<strong data-mce-fragment=\"1\">All puzzles</strong></span></p>\n<p data-mce-fragment=\"1\">\u00a0</p>\n</div>\n</div>\n</div>\n</div>\n<div id=\"shopify-section-product-recommendations\" data-mce-fragment=\"1\"></div>\n<div id=\"product-recommendations\" data-mce-fragment=\"1\">\n<div data-related-products-slider=\"\" data-section-type=\"product-recommendations\" data-section-id=\"product-recommendations\" data-limit=\"8\" data-product-id=\"6574818426993\" data-template=\"\" class=\"related-products page-width product-recommendations js-product-recomendation\" data-mce-fragment=\"1\">\n<div class=\"widget-title not-before\" data-mce-fragment=\"1\"></div>\n</div>\n</div>",
+      "published_at": "2022-08-18T17:01:33-06:00",
+      "created_at": "2022-08-18T17:01:32-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "SpeedCubeShop",
+      "product_type": "Puzzle Lubricant",
+      "tags": [
+        "cosmic",
+        "lube",
+        "lubricant"
+      ],
+      "variants": [
+        {
+          "id": 40052291862663,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "STARDUSTLUBE",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "5.95",
+          "grams": 10,
+          "compare_at_price": "5.95",
+          "position": 1,
+          "product_id": 6746995425415,
+          "created_at": "2022-08-18T17:01:32-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 29953048281223,
+          "created_at": "2022-11-06T10:14:11-07:00",
+          "position": 1,
+          "updated_at": "2022-11-06T10:14:12-07:00",
+          "product_id": 6746995425415,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/stardust-cube-lube.jpg?v=1667754852",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6746995163271,
+      "title": "Lunar Speed Cube Lubricant",
+      "handle": "lunar",
+      "body_html": "<div class=\"tabs__product-page horizontal-tabs\" data-mce-fragment=\"1\">\n<div class=\"wrapper-tab-content\" data-mce-fragment=\"1\">\n<div id=\"collapse-tab1\" data-tabcontent=\"\" class=\"tab-content active\" data-mce-fragment=\"1\">\n<div class=\"rte\" data-mce-fragment=\"1\">\n<meta charset=\"utf-8\">\n<h2 class=\"text-lg font-bold\">Lunar Speed Cube Lubricant</h2>\n<h3 class=\"text-lg font-bold\">Take Your Cubing to Greater Heights with Lunar Speed Cube Lubricant</h3>\n<span> </span>\n<p class=\"my-0.5\">Are you looking for a high-quality lubricant specifically designed for use on speed cubes? Look no further than Lunar Speed Cube Lubricant! This unique formula is specifically designed to reduce friction and improve the overall speed and smoothness of your cube. Plus, its long-lasting performance ensures that it will keep your cube performing at its best for a longer period of time.</p>\n<span> </span>\n<p class=\"my-0.5\">What's more, the lunar-inspired packaging adds a fun and unique touch to this essential cube accessory. No matter if you're a beginner or an experienced speed cuber, Lunar Speed Cube Lubricant is sure to be a must-have for optimizing your cube's performance. Get ready to take your cubing skills to greater heights with Lunar Speed Cube Lubricant!</p>\n</div>\n<div class=\"rte\" data-mce-fragment=\"1\">\n<p data-mce-fragment=\"1\">\u00a0</p>\n<p data-mce-fragment=\"1\"><strong>Recommended for:\u00a0All puzzles (especially big cubes)</strong><br data-mce-fragment=\"1\"></p>\n<p data-mce-fragment=\"1\">\u00a0</p>\n</div>\n</div>\n</div>\n</div>\n<div id=\"product-recommendations\" data-mce-fragment=\"1\">\n<div data-related-products-slider=\"\" data-section-type=\"product-recommendations\" data-section-id=\"product-recommendations\" data-limit=\"8\" data-product-id=\"198735691794\" data-template=\"\" class=\"related-products page-width product-recommendations js-product-recomendation\" data-mce-fragment=\"1\">\n<div class=\"widget-title not-before\" data-mce-fragment=\"1\"><br></div>\n</div>\n</div>",
+      "published_at": "2022-08-18T16:57:14-06:00",
+      "created_at": "2022-08-18T16:57:13-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "SpeedCubeShop",
+      "product_type": "Puzzle Lubricant",
+      "tags": [
+        "cosmic",
+        "lube",
+        "lubricant"
+      ],
+      "variants": [
+        {
+          "id": 40052277182599,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "LUNARLUBE",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "5.95",
+          "grams": 10,
+          "compare_at_price": "5.95",
+          "position": 1,
+          "product_id": 6746995163271,
+          "created_at": "2022-08-18T16:57:13-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 29953044971655,
+          "created_at": "2022-11-06T10:11:50-07:00",
+          "position": 1,
+          "updated_at": "2022-11-06T10:11:51-07:00",
+          "product_id": 6746995163271,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/lunar-cube-lube.jpg?v=1667754711",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6746993918087,
+      "title": "Square-1 Cube - X-Man Volt Square-1 V2 (Fully Magnetic)",
+      "handle": "x-man-volt-square-1-v2-fully-magnetic",
+      "body_html": "<p>\u00a0</p>\n<div class=\"break-words markdown-formatted-text\" data-mce-fragment=\"1\">\n<h2 class=\"text-lg font-bold\" data-mce-fragment=\"1\">Square-1 Cube - X-Man Volt Square-1 V2 (Fully Magnetic)</h2>\n<h3 class=\"text-lg font-bold\" data-mce-fragment=\"1\">Get Faster and More Precise Solving with the X-Man Volt V2 Square-1 Cube</h3>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">Are you looking for a fully magnetic puzzle that is perfect for speedcubing enthusiasts? Then the X-Man Volt V2 Square-1 Cube is just what you need! Thanks to its strong magnets, this puzzle provides a smooth and stable turning experience, allowing for faster and more precise solving. The fully magnetic design also helps to reduce lock-ups and pops, making it easier to solve the puzzle.</p>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">What's more, the V2 version features a revised design with improved corner cutting and stability, making it even more enjoyable to solve. So whether you're a seasoned speedcuber or just starting out, make sure to pick up an X-Man Volt V2 Square-1 Cube\u2014it's sure to become an essential part of your collection!</p>\n</div>\n<div class=\"flex w-full items-center justify-end flex-wrap pt-1.5\" data-mce-fragment=\"1\"><br></div>\n<p><br></p>",
+      "published_at": "2022-08-18T16:54:09-06:00",
+      "created_at": "2022-08-18T16:54:08-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "X-Man Designs",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "square-1"
+      ],
+      "variants": [
+        {
+          "id": 40052275511431,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "X-ManVoltSquare",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": false,
+          "price": "19.95",
+          "grams": 85,
+          "compare_at_price": "19.95",
+          "position": 1,
+          "product_id": 6746993918087,
+          "created_at": "2022-08-18T16:54:08-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 32877753204871,
+          "created_at": "2024-11-03T18:06:54-07:00",
+          "position": 1,
+          "updated_at": "2024-11-03T18:06:55-07:00",
+          "product_id": 6746993918087,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/files/square-1-2.png?v=1730682415",
+          "width": 486,
+          "height": 486
+        },
+        {
+          "id": 29953049297031,
+          "created_at": "2022-11-06T10:14:49-07:00",
+          "position": 2,
+          "updated_at": "2024-06-02T16:27:17-06:00",
+          "product_id": 6746993918087,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/square-1-1.jpg?v=1717367237",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953049231495,
+          "created_at": "2022-11-06T10:14:49-07:00",
+          "position": 3,
+          "updated_at": "2024-06-02T16:27:17-06:00",
+          "product_id": 6746993918087,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/square-1-3.jpg?v=1717367237",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6746993098887,
+      "title": "Clock Puzzle - ShengShou Magnetic Clock",
+      "handle": "shengshou-clock-magnetic",
+      "body_html": "<div class=\"rte\" data-mce-fragment=\"1\">\n<h2 class=\"text-lg font-bold\">Clock Puzzle - ShengShou Magnetic Clock</h2>\n<h3 class=\"text-lg font-bold\">Challenge and Entertain Yourself with the ShengShou Magnetic Clock Puzzle</h3>\n<p class=\"my-0.5\">Are you looking for an innovative puzzle toy that can challenge and entertain puzzle enthusiasts of all ages? Then look no further than the ShengShou Magnetic Clock. This unique puzzle features an intricate, interconnected network of magnetic balls that can be manipulated and rearranged to form a variety of different shapes and patterns. What's more, the clock design adds an extra level of difficulty, as players must pay attention to the movement of the hands in order to align them correctly in order to solve the puzzle.</p>\n<p class=\"my-0.5\">Not only is this puzzle fun and challenging, but it also looks great on your desk or shelf thanks to its sleek design and durable construction. So if you're looking for an exciting new addition to your collection, then make sure to get a ShengShou Magnetic Clock!</p>\n</div>",
+      "published_at": "2022-08-18T16:51:56-06:00",
+      "created_at": "2022-08-18T16:51:55-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "ShengShou",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "clock"
+      ],
+      "variants": [
+        {
+          "id": 40052274233479,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "ShengShouCLOCK",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "9.95",
+          "grams": 140,
+          "compare_at_price": "9.95",
+          "position": 1,
+          "product_id": 6746993098887,
+          "created_at": "2022-08-18T16:51:55-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 29953048084615,
+          "created_at": "2022-11-06T10:13:32-07:00",
+          "position": 1,
+          "updated_at": "2022-11-06T10:13:33-07:00",
+          "product_id": 6746993098887,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/sheng-shou-clock-2.jpg?v=1667754813",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953048051847,
+          "created_at": "2022-11-06T10:13:32-07:00",
+          "position": 2,
+          "updated_at": "2022-11-06T10:13:33-07:00",
+          "product_id": 6746993098887,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/sheng-shou-clock-1.jpg?v=1667754813",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6745474367623,
+      "title": "Skewb - X-Man Wingy V2 Magnetic",
+      "handle": "x-man-wingy-skewb-v2-magnetic",
+      "body_html": "<p>\u00a0</p>\n<div class=\"break-words markdown-formatted-text\" data-mce-fragment=\"1\">\n<h2 class=\"text-lg font-bold\" data-mce-fragment=\"1\">Skewb Cube - X-Man Wingy V2 Magnetic</h2>\n<h3 class=\"text-lg font-bold\" data-mce-fragment=\"1\">Reach Your Fastest Times With the X-Man Wingy V2 Magnetic\u00a0<meta charset=\"utf-8\">Skewb Cube</h3>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">Are you an experienced speedcuber looking for a high-quality puzzle? Then you need the X-Man Wingy V2 Magnetic\u00a0<meta charset=\"utf-8\">Skewb Cube in your collection! Designed with a unique wing-shaped design, this version of the Skewb puzzle allows for faster and smoother turning. Plus, it's equipped with magnets that provide a more stable and consistent feel while solving.</p>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">So if you're looking to take your Skewb solving skills to the next level, make sure to pick up an X-Man Wingy Skewb V2 Magnetic. It's sure to be an essential part of your collection!</p>\n</div>\n<div class=\"flex w-full items-center justify-end flex-wrap pt-1.5\" data-mce-fragment=\"1\"><br></div>\n<p><br></p>",
+      "published_at": "2022-08-16T19:32:31-06:00",
+      "created_at": "2022-08-16T19:32:30-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "X-Man Designs",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "skewb"
+      ],
+      "variants": [
+        {
+          "id": 40047060910215,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "skewbxman",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "22.95",
+          "grams": 68,
+          "compare_at_price": "22.95",
+          "position": 1,
+          "product_id": 6745474367623,
+          "created_at": "2022-08-16T19:32:30-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 29953049526407,
+          "created_at": "2022-11-06T10:15:20-07:00",
+          "position": 1,
+          "updated_at": "2024-06-02T16:27:05-06:00",
+          "product_id": 6745474367623,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/skewb-2.jpg?v=1717367225",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953049493639,
+          "created_at": "2022-11-06T10:15:20-07:00",
+          "position": 2,
+          "updated_at": "2024-06-02T16:27:05-06:00",
+          "product_id": 6745474367623,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/skewb-1.jpg?v=1717367225",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953049559175,
+          "created_at": "2022-11-06T10:15:20-07:00",
+          "position": 3,
+          "updated_at": "2024-06-02T16:27:05-06:00",
+          "product_id": 6745474367623,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/skewb-3.jpg?v=1717367225",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6745468895367,
+      "title": "Pyraminx - QiYi MS Magnetic",
+      "handle": "qiyi-ms-magnetic-pyraminx",
+      "body_html": "<div class=\"break-words markdown-formatted-text\">\n<h2 class=\"text-lg font-bold\">Pyraminx - QiYi MS Magnetic</h2>\n<h3 class=\"text-lg font-bold\">Unlock Your Inner Speedcuber with the QiYi MS Magnetic Pyraminx</h3>\n<p class=\"my-0.5\">If you're looking for a fun and challenging puzzle cube to add to your collection or speedcubing arsenal, then the QiYi MS Magnetic Pyraminx is an excellent choice. This high-quality pyraminx cube is perfect for both speedcubing enthusiasts and beginners alike. It features powerful magnets that provide smooth and stable rotation, allowing you to easily manipulate and solve the cube. The puzzle is made with durable plastic, giving it a sleek black design that looks great in any collection.</p>\n<p class=\"my-0.5\">Plus, with its challenging but enjoyable gameplay, the QiYi MS Magnetic Pyraminx is sure to keep you entertained for hours on end. So if you're looking for an exciting new addition to your speed solving skills, this cube will certainly do the trick!</p>\n</div>\n<div class=\"flex w-full items-center justify-end flex-wrap pt-1.5\"><br></div>\n<p>\u00a0</p>",
+      "published_at": "2022-08-16T19:24:36-06:00",
+      "created_at": "2022-08-16T19:24:35-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "QiYi",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "pyraminx"
+      ],
+      "variants": [
+        {
+          "id": 40047048065159,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "QiYiPyraminx",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "7.95",
+          "grams": 77,
+          "compare_at_price": "7.95",
+          "position": 1,
+          "product_id": 6745468895367,
+          "created_at": "2022-08-16T19:24:35-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 29953046937735,
+          "created_at": "2022-11-06T10:12:43-07:00",
+          "position": 1,
+          "updated_at": "2022-11-06T10:12:52-07:00",
+          "product_id": 6745468895367,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/pyraminx-1.jpg?v=1667754772",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953047003271,
+          "created_at": "2022-11-06T10:12:43-07:00",
+          "position": 2,
+          "updated_at": "2022-11-06T10:12:52-07:00",
+          "product_id": 6745468895367,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/pyraminx-3.jpg?v=1667754772",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953046970503,
+          "created_at": "2022-11-06T10:12:43-07:00",
+          "position": 3,
+          "updated_at": "2022-11-06T10:12:52-07:00",
+          "product_id": 6745468895367,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/pyraminx-2.jpg?v=1667754772",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6745467289735,
+      "title": "7x7 Speed Cube - YJ MGC Magnetic",
+      "handle": "yj-mgc-magnetic-7x7",
+      "body_html": "<p>\u00a0</p>\n<h2 class=\"text-lg font-bold\" data-mce-fragment=\"1\">7x7 Speed Cube - YJ MGC Magnetic</h2>\n<h3 class=\"text-lg font-bold\" data-mce-fragment=\"1\">Discover the YJ MGC Magnetic 7x7 Speed Cube</h3>\n<p>\u00a0</p>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">Are you looking for a high-quality speed cube that's perfect for all levels of cubers? Look no further than the YJ MGC Magnetic 7x7 Speed Cube! This reliable and precise puzzle features powerful magnets for a stable and smooth turning experience. And, thanks to its durable ABS plastic and sturdy core, it will have a long-lasting performance.</p>\n<p>\u00a0</p>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">Plus, its 7x7 size is perfect for those looking for an even higher level of difficulty. And with its sleek and stylish design, this cube is sure to be a hit with any cubing enthusiast! Get ready to take your solving skills to new heights with the YJ MGC Magnetic 7x7 Speed Cube.</p>\n<p><br></p>",
+      "published_at": "2022-08-16T19:23:24-06:00",
+      "created_at": "2022-08-16T19:23:23-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "YJ",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "7x7"
+      ],
+      "variants": [
+        {
+          "id": 40047043149959,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "7x7yjmgc",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "34.95",
+          "grams": 198,
+          "compare_at_price": "34.95",
+          "position": 1,
+          "product_id": 6745467289735,
+          "created_at": "2022-08-16T19:23:23-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 29953052278919,
+          "created_at": "2022-11-06T10:17:46-07:00",
+          "position": 1,
+          "updated_at": "2022-11-06T10:17:49-07:00",
+          "product_id": 6745467289735,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/7x7-1.jpg?v=1667755069",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953052246151,
+          "created_at": "2022-11-06T10:17:46-07:00",
+          "position": 2,
+          "updated_at": "2022-11-06T10:17:49-07:00",
+          "product_id": 6745467289735,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/7x7-3.jpg?v=1667755069",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953052311687,
+          "created_at": "2022-11-06T10:17:46-07:00",
+          "position": 3,
+          "updated_at": "2022-11-06T10:17:49-07:00",
+          "product_id": 6745467289735,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/7x7-2.jpg?v=1667755069",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6745442025607,
+      "title": "6x6 Speed Cube - YJ MGC Magnetic",
+      "handle": "yj-mgc-magnetic-6x6",
+      "body_html": "<p>\u00a0</p>\n<h2 class=\"text-lg font-bold\" data-mce-fragment=\"1\">6x6 Speed Cube - YJ MGC Magnetic</h2>\n<h3 class=\"text-lg font-bold\" data-mce-fragment=\"1\">Take Your Puzzles to the Next Level with the YJ MGC Magnetic 6x6 Speed Cube</h3>\n<p>\u00a0</p>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">Are you looking for a high-quality, challenging puzzle that will keep even experienced cubers on their toes? Then try out the YJ MGC Magnetic 6x6 Speed Cube! This unique puzzle features a magnetic mechanism that adds an extra layer of difficulty to solving. With six faces and six colors, this cube is sure to provide hours of entertainment and mental stimulation\u2014no matter if you're a beginner or a seasoned pro.</p>\n<p>\u00a0</p>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">So go ahead and give the YJ MGC Magnetic 6x6 Speed Cube a try\u2014it's sure to become your new favorite puzzle!</p>\n<p><br></p>",
+      "published_at": "2022-08-16T18:46:03-06:00",
+      "created_at": "2022-08-16T18:46:02-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "YJ",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "6x6"
+      ],
+      "variants": [
+        {
+          "id": 40046991900807,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "6x6yjmgc",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": false,
+          "price": "24.95",
+          "grams": 176,
+          "compare_at_price": "24.95",
+          "position": 1,
+          "product_id": 6745442025607,
+          "created_at": "2022-08-16T18:46:02-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 29953050476679,
+          "created_at": "2022-11-06T10:16:39-07:00",
+          "position": 1,
+          "updated_at": "2022-11-06T10:17:03-07:00",
+          "product_id": 6745442025607,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/6x6-1.jpg?v=1667755023",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953050542215,
+          "created_at": "2022-11-06T10:16:39-07:00",
+          "position": 2,
+          "updated_at": "2022-11-06T10:17:03-07:00",
+          "product_id": 6745442025607,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/6x6-3.jpg?v=1667755023",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953050509447,
+          "created_at": "2022-11-06T10:16:39-07:00",
+          "position": 3,
+          "updated_at": "2022-11-06T10:17:03-07:00",
+          "product_id": 6745442025607,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/6x6-2.jpg?v=1667755023",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6745438584967,
+      "title": "5x5 Speed Cube - YJ MGC Magnetic",
+      "handle": "yj-mgc-magnetic-5x5",
+      "body_html": "<p>\u00a0</p>\n<h2 class=\"text-lg font-bold\" data-mce-fragment=\"1\">5x5 Speed Cube - YJ MGC Magnetic</h2>\n<h3 class=\"text-lg font-bold\" data-mce-fragment=\"1\">Reach Your Fastest Times With the YJ MGC Magnetic 5x5 Speed Cube</h3>\n<p>\u00a0</p>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">Are you looking for a high-quality and reliable speed cube that features powerful magnets to enhance your solving experience? Look no further than the YJ MGC Magnetic 5x5 Speed Cube! Thanks to its smooth and fast turning, you can easily navigate through complex patterns and achieve faster times. Plus, it boasts durable construction, so it can withstand the rigors of intense solving sessions.</p>\n<p>\u00a0</p>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">No matter if you're a beginner or a seasoned cuber, the YJ MGC Magnetic 5x5 is the perfect puzzle for you. Get ready to take your cubing skills to the next level with this must-have puzzle!</p>\n<p><br></p>",
+      "published_at": "2022-08-16T18:42:06-06:00",
+      "created_at": "2022-08-16T18:42:05-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "YJ",
+      "product_type": "Mechanical Puzzles",
+      "tags": [],
+      "variants": [
+        {
+          "id": 40046985805959,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "5x5yjmgc",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "21.95",
+          "grams": 136,
+          "compare_at_price": "21.95",
+          "position": 1,
+          "product_id": 6745438584967,
+          "created_at": "2022-08-16T18:42:06-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 29953050116231,
+          "created_at": "2022-11-06T10:16:12-07:00",
+          "position": 1,
+          "updated_at": "2022-11-06T10:16:17-07:00",
+          "product_id": 6745438584967,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/5x5-1.jpg?v=1667754977",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953050181767,
+          "created_at": "2022-11-06T10:16:12-07:00",
+          "position": 2,
+          "updated_at": "2022-11-06T10:16:17-07:00",
+          "product_id": 6745438584967,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/5x5-3.jpg?v=1667754977",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953050148999,
+          "created_at": "2022-11-06T10:16:12-07:00",
+          "position": 3,
+          "updated_at": "2022-11-06T10:16:17-07:00",
+          "product_id": 6745438584967,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/5x5-2.jpg?v=1667754977",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6743624450183,
+      "title": "4x4 Speed Cube - YJ MGC Magnetic",
+      "handle": "yj-mgc-magnetic-4x4",
+      "body_html": "<p>\u00a0</p>\n<div class=\"rte\" data-mce-fragment=\"1\">\n<h2 class=\"text-lg font-bold\">4x4 Speed Cube - YJ MGC Magnetic</h2>\n<h3 class=\"text-lg font-bold\">Challenge and Engage with the YJ MGC Magnetic 4x4 Speed Cube</h3>\n<p class=\"my-0.5\">Are you looking for a high-performance puzzle cube that will challenge even the most skilled cubers? Look no further than the YJ MGC Magnetic 4x4 Speed Cube! This cube is equipped with powerful magnets, providing a smooth and precise turning experience that allows for quick and effortless solving. Plus, its 4x4 size adds an extra layer of difficulty to the traditional 3x3 cube, making it perfect for those looking to take their cubing skills to the next level.</p>\n<p class=\"my-0.5\">And don't worry about wear and tear\u2014the YJ MGC Magnetic 4x4 Speed Cube is durable and long-lasting, so you can enjoy hours of solving fun without any worries. So whether you're a seasoned cuber or just starting out, make sure to pick up a YJ MGC Magnetic 4x4\u2014it's sure to become an essential part of your collection!</p>\n</div>",
+      "published_at": "2022-08-14T14:14:04-06:00",
+      "created_at": "2022-08-14T14:14:03-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "YJ",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "4x4"
+      ],
+      "variants": [
+        {
+          "id": 40039645839495,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "4x4yjmgc",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "19.95",
+          "grams": 113,
+          "compare_at_price": "19.95",
+          "position": 1,
+          "product_id": 6743624450183,
+          "created_at": "2022-08-14T14:14:03-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 29953049788551,
+          "created_at": "2022-11-06T10:15:46-07:00",
+          "position": 1,
+          "updated_at": "2022-11-06T10:15:52-07:00",
+          "product_id": 6743624450183,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/4x4-1.jpg?v=1667754952",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953049821319,
+          "created_at": "2022-11-06T10:15:46-07:00",
+          "position": 2,
+          "updated_at": "2022-11-06T10:15:52-07:00",
+          "product_id": 6743624450183,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/4x4-3.jpg?v=1667754952",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953049854087,
+          "created_at": "2022-11-06T10:15:46-07:00",
+          "position": 3,
+          "updated_at": "2022-11-06T10:15:52-07:00",
+          "product_id": 6743624450183,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/4x4-2.jpg?v=1667754952",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6743584145543,
+      "title": "3x3 Speed Cube - MoYu RS3 M 2021 (MagLev)",
+      "handle": "moyu-rs3-m-2021-3x3-maglev",
+      "body_html": "<p>\u00a0</p>\n<h2 class=\"text-lg font-bold\" data-mce-fragment=\"1\">3x3 Speed Cube - MoYu RS3 M 2021 (MagLev)</h2>\n<h3 class=\"text-lg font-bold\" data-mce-fragment=\"1\">Take Your Speed Solving Skills to the Next Level with the MOYU RS3 M 2021 (Maglev) 3x3</h3>\n<p>\u00a0</p>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">If you're looking for a high-performance speed cube designed specifically for advanced cubers, then you'll want to check out the MOYU RS3 M 2021 (Maglev) 3x3. This unique cube features a maglev design that uses magnets to provide an incredibly smooth and stable turning experience. The cube is made of durable materials, so you can trust that it won't get damaged during competitive solving. Plus, it has a customizable tension system that allows you to fine-tune the feel of the cube according to your preferences.</p>\n<p>\u00a0</p>\n<p class=\"my-0.5\" data-mce-fragment=\"1\">Overall, the MOYU RS3 M 2021 (Maglev) 3x3 is an excellent choice for anyone looking to take their speed solving skills to the next level. With its advanced features, this cube will give even the most experienced cubers a unique and satisfying solving experience.</p>\n<p><br></p>",
+      "published_at": "2022-08-14T11:28:16-06:00",
+      "created_at": "2022-08-14T11:28:15-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "MoYu",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "3x3"
+      ],
+      "variants": [
+        {
+          "id": 40039361118343,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "MoYuRS3M2021",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "13.95",
+          "grams": 91,
+          "compare_at_price": "13.95",
+          "position": 1,
+          "product_id": 6743584145543,
+          "created_at": "2022-08-14T11:28:15-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 29952884375687,
+          "created_at": "2022-11-06T08:06:01-07:00",
+          "position": 1,
+          "updated_at": "2022-11-06T08:06:22-07:00",
+          "product_id": 6743584145543,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/moyu-rs3-m-2020-1_06b43774-d1ab-422e-8455-1108f04f9520.jpg?v=1667747182",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29952884441223,
+          "created_at": "2022-11-06T08:06:01-07:00",
+          "position": 2,
+          "updated_at": "2022-11-06T08:06:22-07:00",
+          "product_id": 6743584145543,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/moyu-rs3-m-2020-5_d1fbdb91-b78d-43b9-8814-08ef36bb0fd7.jpg?v=1667747182",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29952884342919,
+          "created_at": "2022-11-06T08:06:01-07:00",
+          "position": 3,
+          "updated_at": "2022-11-06T08:06:22-07:00",
+          "product_id": 6743584145543,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/moyu-rs3-m-2020-6_27556ac4-5072-4a46-85f3-cea1bcdab20f.jpg?v=1667747182",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29952884408455,
+          "created_at": "2022-11-06T08:06:01-07:00",
+          "position": 4,
+          "updated_at": "2022-11-06T08:06:03-07:00",
+          "product_id": 6743584145543,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/moyu-rs3-m-2020-4_2cc8555c-1fc2-44c5-bb69-0257094e2901.jpg?v=1667747163",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29952884473991,
+          "created_at": "2022-11-06T08:06:01-07:00",
+          "position": 5,
+          "updated_at": "2022-11-06T08:06:03-07:00",
+          "product_id": 6743584145543,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/moyu-rs3-m-2020-3_a1fb7669-ca8e-4cae-baa7-024e598ecb9b.jpg?v=1667747163",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29952884506759,
+          "created_at": "2022-11-06T08:06:01-07:00",
+          "position": 6,
+          "updated_at": "2022-11-06T08:06:03-07:00",
+          "product_id": 6743584145543,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/moyu-rs3-m-2020-2_2c158593-2e62-4a07-ade3-ddb43fb1851e.jpg?v=1667747163",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6743583522951,
+      "title": "2x2 Speed Cube - Dayan TengYun M",
+      "handle": "dayan-tengyun-m-2x2-speed-cube",
+      "body_html": "<h2>2x2 Speed Cube - Dayan TengYun M</h2>\n<h3>\n<meta charset=\"utf-8\"> <span>Dayan TengYun M 2x2: The Ultimate Speed Cube for Competitive Cubing</span>\n</h3>\n<p><meta charset=\"utf-8\"><span>The Dayan TengYun M 2x2 is a top-of-the-line 2x2 speed cube, perfect for competitive cubers. With its smooth turning mechanism and powerful magnets, you can make fast and precise moves with ease. Made with durable plastic on the outer layers and precision-machined metal at the core, this cube is built to last. Whether you're a novice or an experienced cuber, the Dayan TengYun M 2x2 will help you improve your times and take your skills to the next level.</span></p>",
+      "published_at": "2022-08-14T11:25:32-06:00",
+      "created_at": "2022-08-14T11:25:31-06:00",
+      "updated_at": "2025-06-30T11:34:16-06:00",
+      "vendor": "Dayan",
+      "product_type": "Mechanical Puzzles",
+      "tags": [
+        "2x2"
+      ],
+      "variants": [
+        {
+          "id": 40039358333063,
+          "title": "Default Title",
+          "option1": "Default Title",
+          "option2": null,
+          "option3": null,
+          "sku": "TengYunM2x2",
+          "requires_shipping": true,
+          "taxable": true,
+          "featured_image": null,
+          "available": true,
+          "price": "18.95",
+          "grams": 59,
+          "compare_at_price": "18.95",
+          "position": 1,
+          "product_id": 6743583522951,
+          "created_at": "2022-08-14T11:25:31-06:00",
+          "updated_at": "2025-06-30T11:34:16-06:00"
+        }
+      ],
+      "images": [
+        {
+          "id": 29953044414599,
+          "created_at": "2022-11-06T10:10:58-07:00",
+          "position": 1,
+          "updated_at": "2022-11-06T10:10:59-07:00",
+          "product_id": 6743583522951,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/2x2-4.jpg?v=1667754659",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953044381831,
+          "created_at": "2022-11-06T10:10:58-07:00",
+          "position": 2,
+          "updated_at": "2024-06-06T21:56:52-06:00",
+          "product_id": 6743583522951,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/2x2-1.jpg?v=1717732612",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953044480135,
+          "created_at": "2022-11-06T10:10:58-07:00",
+          "position": 3,
+          "updated_at": "2024-06-06T21:56:52-06:00",
+          "product_id": 6743583522951,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/2x2-3.jpg?v=1717732612",
+          "width": 1200,
+          "height": 1200
+        },
+        {
+          "id": 29953044447367,
+          "created_at": "2022-11-06T10:10:58-07:00",
+          "position": 4,
+          "updated_at": "2024-06-06T21:56:52-06:00",
+          "product_id": 6743583522951,
+          "variant_ids": [],
+          "src": "https://cdn.shopify.com/s/files/1/0551/7433/2551/products/2x2-2.jpg?v=1717732612",
+          "width": 1200,
+          "height": 1200
+        }
+      ],
+      "options": [
+        {
+          "name": "Title",
+          "position": 1,
+          "values": [
+            "Default Title"
+          ]
+        }
+      ]
+    }
+  ]
+}
