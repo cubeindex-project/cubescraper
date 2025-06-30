@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        store: [scs, cubicle, cubelelo, dailypuzzles, gancube, kewbz, sc-za]
+        store: [scs, cubicle, cubelelo, dailypuzzles, gancube, kewbz, sc-za, d-fan, kill-cubes, cube-speed]
 
     steps:
       # 2.1  Check out your repo
