@@ -124,7 +124,7 @@ def parse_args() -> argparse.Namespace:
 if __name__ == "__main__":
     args = parse_args()
     base_url = STORES[args.store]
-    out_file = args.outfile or f"{args.store}_products.json"
+    out_file = args.outfile or f"stores_products/{args.store}_products.json"
 
     all_products = fetch_all_products(base_url)
     data = {"store": args.store, "products": all_products}
