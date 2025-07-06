@@ -2,14 +2,8 @@ name: Fetch cube store catalogues
 
 permissions:
   contents: write
-
-# ──────────────────────────────────────────────────────────────────────────────
-# 1. Run nightly at 03:00 UTC (adjust as you wish)
-#    + reusable “dispatch” so you can trigger it manually from the Actions tab
-# ──────────────────────────────────────────────────────────────────────────────
+  
 on:
-  schedule:
-    - cron: "0 3 * * *" # every day at 03:00 UTC
   workflow_dispatch:
 
 # ──────────────────────────────────────────────────────────────────────────────
