@@ -8,28 +8,18 @@ Run again at any time — conflicting rows are upserted instead of failing.
 """
 
 from __future__ import annotations
-import json, os, re, sys
+import json, re
 from pathlib import Path
 from html import unescape
-from typing import List
 from collections import OrderedDict
-
-from dotenv import load_dotenv
-from supabase import create_client, Client
 
 from slugify import slugify
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 0) Environment & Supabase client
 # ──────────────────────────────────────────────────────────────────────────────
-load_dotenv(".env.local")
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
-if not (SUPABASE_URL and SUPABASE_KEY):
-    sys.exit("❌  SUPABASE_URL or SUPABASE_KEY missing in .env.local")
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+from common.supabaseClient import supabase
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1) File locations
