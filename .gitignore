@@ -1,3 +1,5 @@
 .env.local
 supabase
 .vscode
+__pycache__/
+*.pyc
