@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Bulk-import every *_products.json in ./stores_products into the cube_models
-table on Supabase, after cleaning + normalisation, and keep a local JSON dump
-for manual inspection.
+Bulk-import every *_products.json in ./data/raw into the cube_models table on
+Supabase, after cleaning + normalisation, and keep a local JSON dump for manual
+inspection.
 
 Run again at any time — conflicting rows are upserted instead of failing.
 """
@@ -34,9 +34,10 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ──────────────────────────────────────────────────────────────────────────────
 # 1) File locations
 # ──────────────────────────────────────────────────────────────────────────────
-STORES_DIR = Path("./stores_products")
-OUTPUT_FILE = Path("./normalized_outputs/all_products_normalized.json")
-OUTPUT_FILE.parent.mkdir(exist_ok=True)
+BASE_DIR = Path(__file__).resolve().parents[1]
+STORES_DIR = BASE_DIR / "data" / "raw"
+OUTPUT_FILE = BASE_DIR / "data" / "processed" / "all_products_normalized.json"
+OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 2)  Constants & helpers (unchanged – collapsible for brevity)

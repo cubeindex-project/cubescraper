@@ -124,9 +124,13 @@ def parse_args() -> argparse.Namespace:
 if __name__ == "__main__":
     args = parse_args()
     base_url = STORES[args.store]
-    out_file = args.outfile or f"stores_products/{args.store}_products.json"
+
+    base_dir = pathlib.Path(__file__).resolve().parents[1]
+    default_out = base_dir / "data" / "raw" / f"{args.store}_products.json"
+    out_path = pathlib.Path(args.outfile) if args.outfile else default_out
 
     all_products = fetch_all_products(base_url)
     data = {"store": args.store, "products": all_products}
-    pathlib.Path(out_file).write_text(json.dumps(data, indent=2), encoding="utf-8")
-    print(f"📄  Saved to {out_file}")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    print(f"📄  Saved to {out_path}")
