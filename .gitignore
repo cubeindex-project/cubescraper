@@ -4,3 +4,4 @@ supabase
 __pycache__/
 *.pyc
 .debug
+data
