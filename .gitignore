@@ -3,3 +3,4 @@ supabase
 .vscode
 __pycache__/
 *.pyc
+.debug
