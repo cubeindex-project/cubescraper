@@ -8,7 +8,7 @@ Run again at any time — conflicting rows are upserted instead of failing.
 """
 
 from __future__ import annotations
-import json, re
+import json, re, os, sys
 from pathlib import Path
 from html import unescape
 from collections import OrderedDict
@@ -19,7 +19,8 @@ from slugify import slugify
 # 0) Environment & Supabase client
 # ──────────────────────────────────────────────────────────────────────────────
 
-from common.supabaseClient import supabase
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+from src.common.supabaseClient import supabase  # noqa: E402
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1) File locations
