@@ -1,4 +1,3 @@
-# fetch_cube_price.py
 import sys
 import os
 import argparse
@@ -19,6 +18,20 @@ from urllib.parse import urlparse
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from src.common.supabaseClient import supabase  # noqa: E402
 
+# ---- Pretty console (always-on progress) ------------------------------------
+from rich.console import Console
+from rich.progress import (
+    Progress,
+    TextColumn,
+    BarColumn,
+    TaskProgressColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
+from rich.logging import RichHandler
+
+console = Console()
+
 # ---- Supported vendors (hostname fragments) ----
 SUPPORTED_VENDORS = [
     "thecubicle.com",
@@ -32,10 +45,9 @@ parser = argparse.ArgumentParser(
     "fetch_cube_price",
     description="Fetch price & availability for known vendor links and update DB.",
 )
-parser.add_argument("--debug", action="store_true", help="Verbose debugging logs.")
-parser.add_argument(
-    "--progress", action="store_true", help="Show a progress bar (tqdm)."
-)
+# Logging is now optional:
+parser.add_argument("--log", action="store_true", help="Enable pretty INFO logs.")
+parser.add_argument("--debug", action="store_true", help="Enable DEBUG logs.")
 parser.add_argument(
     "--save-html",
     action="store_true",
@@ -55,6 +67,7 @@ def get_vendor_links() -> list[dict[str, Any]]:
     res = (
         supabase.table("cube_vendor_links")
         .select("id,url,vendor_name,cube_slug,price,available,updated_at")
+        .order("updated_at", desc=True)
         .execute()
     )
     return res.data or []
@@ -126,7 +139,7 @@ def extract_json_ld_block(
 ) -> Optional[Dict[str, Any]]:
     """
     Return the first JSON-LD Product node (handles arrays & @graph) or None.
-    extruct extracts structured data like JSON-LD reliably.  :contentReference[oaicite:3]{index=3}
+    extruct extracts structured data like JSON-LD reliably.
     """
     data = extruct.extract(
         html, base_url=get_base_url(html, url), syntaxes=["json-ld"], uniform=True
@@ -195,7 +208,6 @@ def extract_from_json_ld(
         elif "outofstock" in availability_raw or "soldout" in availability_raw:
             available = False
         elif "preorder" in availability_raw:
-            # Treat preorder as available if you want carts enabled
             available = True
 
         if debug:
@@ -210,7 +222,6 @@ def extract_from_json_ld(
 
 
 # ---- HTML fallback ----------------------------------------------------------
-# BeautifulSoup (with SoupSieve) supports robust CSS selection and text queries. :contentReference[oaicite:4]{index=4}
 PRICE_RE = re.compile(
     r"(?:\$|€|£)?\s?(\d{1,5}(?:[.,]\d{2})?)\s?(?:€|eur|usd|gbp|£|\$)?", re.I
 )
@@ -345,112 +356,156 @@ def is_supported_vendor(url: str) -> bool:
     return any(v in url for v in SUPPORTED_VENDORS)
 
 
-def _maybe_wrap_progress(it: Iterable[dict[str, Any]], enabled: bool):
-    """
-    Optionally wrap an iterable with tqdm progress; fall back gracefully.
-    """
-    if not enabled:
-        return it
-    try:
-        from tqdm import tqdm  # type: ignore
-
-        return tqdm(it, unit="link")
-    except Exception:
-        logging.warning("tqdm not installed; continuing without progress bar.")
-        return it
-
-
 # ---- Main -------------------------------------------------------------------
 if __name__ == "__main__":
     args = parser.parse_args()
 
-    # Configure logging: INFO by default; DEBUG with --debug
+    # Configure logging:
+    # - Default: logs OFF (except warnings/errors from libraries)
+    # - --log  : INFO
+    # - --debug: DEBUG
+    log_level = logging.WARNING
+    if args.log:
+        log_level = logging.INFO
+    if args.debug:
+        log_level = logging.DEBUG
+
     logging.basicConfig(
-        level=logging.DEBUG if args.debug else logging.INFO,
-        format="%(levelname)s %(message)s",
+        level=log_level,
+        format="%(message)s",
+        datefmt="[%X]",
+        handlers=[RichHandler(rich_tracebacks=True)],
     )
-    logging.info("== CubeIndex Price Tracker ==")
-    logging.info("Loading vendor links from database...")
+
+    console.rule("[bold cyan]CubeIndex Price Tracker")
+    console.print("Loading vendor links from database...")
 
     links = get_vendor_links()
     if args.limit and args.limit > 0:
         links = links[: args.limit]
 
     if not links:
-        logging.error("No vendor links found.")
+        console.print("[red]No vendor links found.[/]")
         sys.exit(1)
 
-    logging.info("Found %d links. Starting run.", len(links))
+    total = len(links)
+    console.print(f"[green]Found {total} link(s). Starting run...[/]")
 
-    for link in _maybe_wrap_progress(links, args.progress):
-        vendor = link["vendor_name"]
-        url = link["url"]
-        logging.info("→ %s | %s", vendor, url)
+    # Always-on progress bar
+    with Progress(
+        TextColumn("[bold]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        TimeElapsedColumn(),
+        TimeRemainingColumn(),
+        transient=False,
+        console=console,
+    ) as progress:
+        task = progress.add_task("Processing", total=total)
 
-        if not is_supported_vendor(url):
-            logging.warning("0) SKIP    | Unsupported vendor for URL: %s", url)
-            continue
+        changed_count = 0
+        unchanged_count = 0
+        skipped_count = 0
+        error_count = 0
 
-        # 1) FETCH
-        logging.info("1) FETCH   | requesting page...")
-        try:
-            status, html, headers, final_url = fetch_page_content(url, debug=args.debug)
-        except Exception as e:
-            logging.error("Fetch failed: %r", e)
-            continue
-        logging.info("   FETCHED | HTTP=%s final_url=%s", status, final_url)
+        for link in links:
+            vendor = link["vendor_name"]
+            url = link["url"]
+            cube_slug = link["cube_slug"]
+            progress.update(task, description=f"[cyan]{vendor}[/] • {cube_slug}")
 
-        if args.save_html:
-            path = ensure_debug_file(html, vendor, link["cube_slug"])
-            logging.info("   SAVED   | HTML -> %s", path)
+            if not is_supported_vendor(url):
+                skipped_count += 1
+                logging.warning("0) SKIP    | Unsupported vendor for URL: %s", url)
+                progress.advance(task)
+                continue
 
-        # 2) JSON-LD
-        logging.info("2) JSON-LD | extracting structured data...")
-        price, available, raw = None, None, {}
-        product_node = extract_json_ld_block(html, final_url, debug=args.debug)
-        if product_node:
-            price, available, raw = extract_from_json_ld(product_node, debug=args.debug)
-        logging.info("   JSON-LD | price=%s available=%s", price, available)
+            # 1) FETCH
+            logging.info("1) FETCH   | requesting page...")
+            try:
+                status, html, headers, final_url = fetch_page_content(
+                    url, debug=args.debug
+                )
+            except Exception as e:
+                error_count += 1
+                logging.error("Fetch failed: %r", e)
+                progress.advance(task)
+                continue
+            logging.info("   FETCHED | HTTP=%s final_url=%s", status, final_url)
 
-        # 3) HTML fallback
-        if price is None or available is None:
-            logging.info("3) HTML    | falling back to HTML heuristics...")
-            p2, a2, raw2 = extract_from_html(final_url, html, debug=args.debug)
-            if price is None:
-                price = p2
-            if available is None:
-                available = a2
-            raw.update(raw2)
-        logging.info("   HTML    | price=%s available=%s", price, available)
+            if args.save_html:
+                path = ensure_debug_file(html, vendor, cube_slug)
+                logging.info("   SAVED   | HTML -> %s", path)
 
-        # 4) DECIDE availability
-        logging.info("4) DECIDE  | merging HTTP + parse signals...")
-        final_available, reason = decide_available(status, available, debug=args.debug)
-        logging.info(
-            "   DECIDE  | final_available=%s reason=%s", final_available, reason
-        )
+            # 2) JSON-LD
+            logging.info("2) JSON-LD | extracting structured data...")
+            price, available, raw = None, None, {}
+            product_node = extract_json_ld_block(html, final_url, debug=args.debug)
+            if product_node:
+                price, available, raw = extract_from_json_ld(
+                    product_node, debug=args.debug
+                )
+            logging.info("   JSON-LD | price=%s available=%s", price, available)
 
-        # Compare vs DB row; don’t lose explicit False/0.00
-        new_price = price if price is not None else link["price"]
-        new_available = (
-            final_available if final_available is not None else link["available"]
-        )
+            # 3) HTML fallback
+            if price is None or available is None:
+                logging.info("3) HTML    | falling back to HTML heuristics...")
+                p2, a2, raw2 = extract_from_html(final_url, html, debug=args.debug)
+                if price is None:
+                    price = p2
+                if available is None:
+                    available = a2
+                raw.update(raw2)
+            logging.info("   HTML    | price=%s available=%s", price, available)
 
-        changed = (new_price != link["price"]) or (new_available != link["available"])
-        logging.info(
-            "   CHECK   | changed=%s (old_price=%s old_av=%s)",
-            changed,
-            link["price"],
-            link["available"],
-        )
+            # 4) DECIDE availability
+            logging.info("4) DECIDE  | merging HTTP + parse signals...")
+            final_available, reason = decide_available(
+                status, available, debug=args.debug
+            )
+            logging.info(
+                "   DECIDE  | final_available=%s reason=%s", final_available, reason
+            )
 
-        if changed:
-            update_vendor_link(link, new_price, new_available, reason)
-        else:
-            logging.info("5) UPDATE  | no changes detected.")
+            # Compare vs DB row; don’t lose explicit False/0.00
+            new_price = price if price is not None else link["price"]
+            new_available = (
+                final_available if final_available is not None else link["available"]
+            )
 
-        if args.debug:
-            # Truncate raw signals to avoid huge logs
-            logging.debug("RAW SIGNALS: %s", json.dumps(raw, ensure_ascii=False)[:2000])
+            changed = (new_price != link["price"]) or (
+                new_available != link["available"]
+            )
+            logging.info(
+                "   CHECK   | changed=%s (old_price=%s old_av=%s)",
+                changed,
+                link["price"],
+                link["available"],
+            )
 
-    logging.info("Run complete.")
+            try:
+                if changed:
+                    update_vendor_link(link, new_price, new_available, reason)
+                    changed_count += 1
+                else:
+                    logging.info("5) UPDATE  | no changes detected.")
+                    unchanged_count += 1
+            except Exception as e:
+                error_count += 1
+                logging.error("DB update failed: %r", e)
+
+            if args.debug:
+                # Truncate raw signals to avoid huge logs
+                logging.debug(
+                    "RAW SIGNALS: %s", json.dumps(raw, ensure_ascii=False)[:2000]
+                )
+
+            progress.advance(task)
+
+    console.rule("[bold]Summary")
+    console.print(
+        f"[green]Changed:[/] {changed_count}  "
+        f"[yellow]Unchanged:[/] {unchanged_count}  "
+        f"[blue]Skipped:[/] {skipped_count}  "
+        f"[red]Errors:[/]{error_count}"
+    )

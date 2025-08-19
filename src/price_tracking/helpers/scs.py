@@ -45,5 +45,6 @@ def parse_scs(
             "html": True,
             "reason": "price_tag",
             "price_node": str(price_tag) if price_tag else None,
+            "availability_node": str(availability_tag) if availability_tag else None,
         },
     )
