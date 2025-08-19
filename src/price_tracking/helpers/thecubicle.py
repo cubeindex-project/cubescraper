@@ -22,14 +22,13 @@ unavailable_keyword = [
 
 def parse_cubicle(
     html: str,
-) -> Tuple[Optional[float], Optional[bool], Optional[str], Dict[str, Any]]:
+) -> Tuple[Optional[float], Optional[bool], Dict[str, Any]]:
     soup = BeautifulSoup(html, "html.parser")
 
     price_tag = soup.find("meta", attrs={"itemprop": "price"})
-    currency_tag = soup.find("meta", attrs={"itemprop": "priceCurrency"})
     availability_tag = soup.find("link", attrs={"itemprop": "availability"})
 
-    price, currency, available, availability = None, None, None, None
+    price, available, availability = None, None, None
 
     if availability_tag:
         availability = availability_tag.get("href")
@@ -43,12 +42,9 @@ def parse_cubicle(
 
     if price_tag:
         price = price_tag.get("content")
-    if currency_tag:
-        currency = currency_tag.get("content")
 
     return (
         float(price),
         available,
-        str(currency),
         {"html": True, "reason": "price_tag", "price_match": price_tag},
     )

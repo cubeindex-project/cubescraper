@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 
 def parse_speedcubes_co_za(
     html: str,
-) -> Tuple[Optional[float], Optional[bool], Optional[str], Dict[str, Any]]:
+) -> Tuple[Optional[float], Optional[bool], Dict[str, Any]]:
     soup = BeautifulSoup(html, "html.parser")
 
     price_tag = soup.find("span", class_="product-price--original")
@@ -25,6 +25,5 @@ def parse_speedcubes_co_za(
     return (
         float(price),
         available,
-        "ZAR",
         {"html": True, "reason": "price_tag", "price_match": price_tag},
     )

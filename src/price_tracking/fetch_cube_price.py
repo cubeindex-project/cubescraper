@@ -18,13 +18,17 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 from src.common.supabaseClient import supabase  # noqa: E402
 
 
-SUPPORTED_VENDORS = ["www.thecubicle.com", "www.gancube.com", "www.speedcubeshop.com", "www.speedcubes.co.za"]
+SUPPORTED_VENDORS = [
+    "thecubicle.com",
+    "gancube.com",
+    "speedcubeshop.com",
+    "speedcubes.co.za",
+]
 
 # ----------------------------
 # CLI
 # ----------------------------
 parser = argparse.ArgumentParser("fetch_cube_price")
-parser.add_argument("cube", help="A cube slug from the cube_models table.", type=str)
 parser.add_argument("--debug", action="store_true", help="Verbose debugging logs.")
 parser.add_argument(
     "--save-html",
@@ -39,15 +43,42 @@ parser.add_argument(
 # ----------------------------
 # DB access
 # ----------------------------
-def get_vendor_links(cube_slug: str):
+def get_vendor_links():
     """Return ALL vendor links for a cube (so you can see differences per store)."""
     res = (
         supabase.table("cube_vendor_links")
         .select("id,url,vendor_name,cube_slug,price,available,updated_at")
-        .eq("cube_slug", cube_slug)
         .execute()
     )
     return res.data or []
+
+
+def update_vendor_link(
+    link: Dict[str, Any],
+    new_price: float,
+    new_available: bool,
+):
+    """Return ALL vendor links for a cube (so you can see differences per store)."""
+
+    # Summary print (kept like your original)
+    print(f"Cube: {link['cube_slug']}")
+    print(f"Vendor: {link["vendor_name"]}")
+    print(f"Price: {link["price"]} -> {new_price}".strip())
+    print(f"Available: {link["available"]} -> {new_available} (reason={reason})")
+
+    supabase.table("cube_vendor_links").update(
+        {"price": new_price, "available": new_available, "updated_at": "now()"}
+    ).eq("id", link["id"]).execute()
+
+    supabase.table("cube_vendor_links_snapshot").insert(
+        {
+            "price": new_price,
+            "available": new_available,
+            "vendor_name": link["vendor_name"],
+            "cube_slug": link["cube_slug"],
+            "url": link["url"],
+        }
+    ).execute()
 
 
 # ----------------------------
@@ -111,24 +142,18 @@ def extract_json_ld_block(
 
 def extract_from_json_ld(
     product_node: Dict[str, Any], debug: bool = False
-) -> Tuple[Optional[float], Optional[bool], Optional[str], Dict[str, Any]]:
-    """Extract price, availability, currency from a JSON-LD Product node."""
+) -> Tuple[Optional[float], Optional[bool], Dict[str, Any]]:
+    """Extract price, availability from a JSON-LD Product node."""
     offers = product_node.get("offers")
     if isinstance(offers, list):
         offers = offers[0] if offers else None
 
     price = None
     available = None
-    currency = None
 
     if offers:
         price_raw = offers.get("price") or (offers.get("priceSpecification") or {}).get(
             "price"
-        )
-        currency = (
-            offers.get("priceCurrency")
-            or (offers.get("priceSpecification") or {}).get("priceCurrency")
-            or None
         )
         availability_raw = str(offers.get("availability", "")).lower()
 
@@ -151,10 +176,10 @@ def extract_from_json_ld(
 
         if debug:
             logging.debug(
-                f"[JSON-LD] Extracted price={price}, available={available}, currency={currency}, availability_raw={availability_raw}"
+                f"[JSON-LD] Extracted price={price}, available={available}, availability_raw={availability_raw}"
             )
 
-    return price, available, currency, {"jsonld": product_node}
+    return price, available, {"jsonld": product_node}
 
 
 # ----------------------------
@@ -170,7 +195,7 @@ PREORDER_WORDS = ("preorder", "précommande")
 
 def extract_from_html(
     url: str, html: str, debug: bool = False
-) -> Tuple[Optional[float], Optional[bool], Optional[str], Dict[str, Any]]:
+) -> Tuple[Optional[float], Optional[bool], Dict[str, Any]]:
     soup = BeautifulSoup(html, "lxml")
     text = soup.get_text(" ", strip=True).lower()
     available = None
@@ -230,7 +255,6 @@ def extract_from_html(
         return (
             price,
             available,
-            None,
             {"html": True, "reason": reason, "price_match": match_text},
         )
 
@@ -265,6 +289,10 @@ def ensure_debug_file(html: str, vendor: str, cube: str):
     return str(out)
 
 
+def is_supported_vendor(url: str) -> bool:
+    return any(vendor in url for vendor in SUPPORTED_VENDORS)
+
+
 # ----------------------------
 # Main
 # ----------------------------
@@ -275,12 +303,12 @@ if __name__ == "__main__":
         format="%(levelname)s %(message)s",
     )
 
-    links = get_vendor_links(args.cube)
+    links = get_vendor_links()
     if args.limit and args.limit > 0:
         links = links[: args.limit]
 
     if not links:
-        logging.error("No vendor links found for cube slug: %s", args.cube)
+        logging.error("No vendor links found")
         sys.exit(1)
 
     for link in links:
@@ -288,9 +316,9 @@ if __name__ == "__main__":
         url = link["url"]
         logging.info("=== %s | %s ===", vendor, url)
 
-        if urlparse(url).hostname not in SUPPORTED_VENDORS:
+        if not is_supported_vendor(url):
             logging.error("Unsupported vendor: %s", vendor)
-            break
+            continue
 
         try:
             status, html, headers, final_url = fetch_page_content(url, debug=args.debug)
@@ -303,34 +331,35 @@ if __name__ == "__main__":
             logging.info("Saved HTML to %s", path)
 
         # 1) JSON-LD first
-        price, available, currency, raw = None, None, None, {}
+        price, available, raw = None, None, {}
 
         product_node = extract_json_ld_block(html, final_url, debug=args.debug)
         if product_node:
-            price, available, currency, raw = extract_from_json_ld(
+            price, available, raw = extract_from_json_ld(
                 product_node, debug=args.debug
             )
 
         # 2) Fallback to HTML
         if price is None or available is None:
-            p2, a2, c2, raw2 = extract_from_html(url, html, debug=args.debug)
+            p2, a2, raw2 = extract_from_html(url, html, debug=args.debug)
             if price is None:
                 price = p2
             if available is None:
                 available = a2
-            if currency is None:
-                currency = c2
             raw.update(raw2)
 
         # 3) Decide final availability with HTTP status
         final_available, reason = decide_available(status, available, debug=args.debug)
 
-        # Summary print (kept like your original)
-        print(f"Cube: {link['cube_slug']}")
-        print(f"Vendor: {vendor}")
         print(f"HTTP: {status}")
-        print(f"Price: {price} {currency or ''}".strip())
-        print(f"Available: {final_available} (reason={reason})")
+        if price != link["price"] or final_available != link["available"]:
+            update_vendor_link(
+                link,
+                price or link["price"],
+                final_available or link["available"],
+            )
+        else:
+            logging.info("No change")
 
         # Extra debug dump (opt-in)
         if args.debug:

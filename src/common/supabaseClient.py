@@ -6,8 +6,8 @@ from supabase import create_client, Client
 load_dotenv(".env.local")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
-if not (SUPABASE_URL and SUPABASE_KEY):
-    sys.exit("❌  SUPABASE_URL or SUPABASE_KEY missing in .env.local")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+if not (SUPABASE_URL and SUPABASE_SERVICE_KEY):
+    sys.exit("❌  SUPABASE_URL or SUPABASE_SERVICE_KEY missing in .env.local")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)

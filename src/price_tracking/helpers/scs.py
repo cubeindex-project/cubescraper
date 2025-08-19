@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 
 def parse_scs(
     html: str,
-) -> Tuple[Optional[float], Optional[bool], Optional[str], Dict[str, Any]]:
+) -> Tuple[Optional[float], Optional[bool], Dict[str, Any]]:
     soup = BeautifulSoup(html, "html.parser")
 
     price_tag = soup.find("span", {"itemprop": "price"})
@@ -15,7 +15,7 @@ def parse_scs(
     if availability_tag:
         if availability_tag["value"] == "Add to cart":
             available = True
-        elif not availability_tag["value"] == "Add to cart":
+        elif availability_tag["value"] != "Add to cart":
             available = False
         else:
             available = None
@@ -28,6 +28,5 @@ def parse_scs(
     return (
         float(price),
         available,
-        "USD",
         {"html": True, "reason": "price_tag", "price_match": price_tag},
     )
