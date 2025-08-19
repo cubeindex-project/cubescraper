@@ -6,6 +6,7 @@ import logging
 import re
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
+import datetime as dt
 
 import requests
 from bs4 import BeautifulSoup
@@ -55,19 +56,25 @@ def get_vendor_links():
 
 def update_vendor_link(
     link: Dict[str, Any],
-    new_price: float,
-    new_available: bool,
+    new_price: Optional[float],
+    new_available: Optional[bool],
+    reason: str,
 ):
     """Return ALL vendor links for a cube (so you can see differences per store)."""
 
     # Summary print (kept like your original)
     print(f"Cube: {link['cube_slug']}")
-    print(f"Vendor: {link["vendor_name"]}")
-    print(f"Price: {link["price"]} -> {new_price}".strip())
-    print(f"Available: {link["available"]} -> {new_available} (reason={reason})")
+    print(f"Vendor: {link['vendor_name']}")
+    print(f"Price: {link['price']} -> {new_price}")
+    print(f"Available: {link['available']} -> {new_available} (reason={reason})")
 
+    # prefer DB trigger for updated_at (see SQL below). If not present, set UTC now() here.
     supabase.table("cube_vendor_links").update(
-        {"price": new_price, "available": new_available, "updated_at": "now()"}
+        {
+            "price": new_price,
+            "available": new_available,
+            "updated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        }
     ).eq("id", link["id"]).execute()
 
     supabase.table("cube_vendor_links_snapshot").insert(
@@ -335,9 +342,7 @@ if __name__ == "__main__":
 
         product_node = extract_json_ld_block(html, final_url, debug=args.debug)
         if product_node:
-            price, available, raw = extract_from_json_ld(
-                product_node, debug=args.debug
-            )
+            price, available, raw = extract_from_json_ld(product_node, debug=args.debug)
 
         # 2) Fallback to HTML
         if price is None or available is None:
@@ -352,12 +357,13 @@ if __name__ == "__main__":
         final_available, reason = decide_available(status, available, debug=args.debug)
 
         print(f"HTTP: {status}")
-        if price != link["price"] or final_available != link["available"]:
-            update_vendor_link(
-                link,
-                price or link["price"],
-                final_available or link["available"],
-            )
+        new_price = price if price is not None else link["price"]
+        new_available = (
+            final_available if final_available is not None else link["available"]
+        )
+
+        if (new_price != link["price"]) or (new_available != link["available"]):
+            update_vendor_link(link, new_price, new_available, reason)
         else:
             logging.info("No change")
 

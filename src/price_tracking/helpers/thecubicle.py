@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 from typing import Any, Dict, Optional, Tuple
+import re
 
 available_keyword = [
     "http://schema.org/InStock",
@@ -23,6 +24,10 @@ unavailable_keyword = [
 def parse_cubicle(
     html: str,
 ) -> Tuple[Optional[float], Optional[bool], Dict[str, Any]]:
+    """
+    TheCubicle: price via <meta itemprop="price" content="..">
+                availability via <link itemprop="availability" href="http://schema.org/...">
+    """
     soup = BeautifulSoup(html, "html.parser")
 
     price_tag = soup.find("meta", attrs={"itemprop": "price"})
@@ -41,10 +46,20 @@ def parse_cubicle(
         available = None
 
     if price_tag:
-        price = price_tag.get("content")
+        raw = price_tag.get("content")
+        if raw:
+            raw = re.sub(r"[^\d.,]", "", str(raw)).replace(",", ".")
+            try:
+                price = float(raw)
+            except Exception:
+                price = None
 
     return (
-        float(price),
+        price,
         available,
-        {"html": True, "reason": "price_tag", "price_match": price_tag},
+        {
+            "html": True,
+            "reason": "availability+price",
+            "price_node": str(price_tag) if price_tag else None,
+        },
     )
