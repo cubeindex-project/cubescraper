@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4 lxml extruct w3lib supabase dotenv      
+          pip install -r requirements.txt
 
       - name: Run fetch_cube_price
         env:
