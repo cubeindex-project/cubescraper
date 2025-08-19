@@ -9,7 +9,7 @@ def parse_speedcubes_co_za(
     """
     speedcubes.co.za: price in .product-price--original; add-to-cart disabled => OOS.
     """
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, "lxml")
 
     price_tag = soup.find("span", class_="product-price--original")
     availability_tag = soup.find("button", class_="add-to-cart")

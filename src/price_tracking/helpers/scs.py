@@ -10,7 +10,7 @@ def parse_scs(
     SpeedCubeShop: price may be <meta itemprop="price"> or <span itemprop="price"> or .money
                    availability via input#product-add-to-cart[value="Add to cart"].
     """
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, "lxml")
 
     price_tag = (
         soup.find("meta", {"itemprop": "price"})  # meta content

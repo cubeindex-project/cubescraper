@@ -28,7 +28,7 @@ def parse_cubicle(
     TheCubicle: price via <meta itemprop="price" content="..">
                 availability via <link itemprop="availability" href="http://schema.org/...">
     """
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, "lxml")
 
     price_tag = soup.find("meta", attrs={"itemprop": "price"})
     availability_tag = soup.find("link", attrs={"itemprop": "availability"})

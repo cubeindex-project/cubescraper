@@ -10,7 +10,7 @@ def parse_gancube(
     GANCube (Shopify theme): price is in .price-item--sale/--regular or <meta itemprop="price">
                              availability inferred from product-form submit button disabled state.
     """
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, "lxml")
 
     price_tag = (
         soup.find("span", class_="price-item--sale")

@@ -4,15 +4,19 @@ import argparse
 import json
 import logging
 import re
+import time
+import random
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, Iterable
 import datetime as dt
+from datetime import datetime, timezone, timedelta
+from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
 import extruct
 from w3lib.html import get_base_url
-from urllib.parse import urlparse
 
 # allow "src.common.supabaseClient" import
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
@@ -40,12 +44,31 @@ SUPPORTED_VENDORS = [
     "speedcubes.co.za",
 ]
 
+# ---- Throttling & cooldown config -------------------------------------------
+VENDOR_MIN_INTERVAL = {
+    "thecubicle.com": 5.0,
+    "gancube.com": 8.0,
+    "speedcubeshop.com": 6.0,
+    "speedcubes.co.za": 6.0,
+}
+DEFAULT_MIN_INTERVAL = 8.0
+JITTER_RANGE = (0.0, 0.4)  # seconds
+
+# Skip rows updated too recently
+LINK_COOLDOWN = timedelta(hours=12)
+
+BACKOFF_EXP_CAP = 4  # stop doubling after 2^4 (tweak as you like)
+MAX_LINK_COOLDOWN = timedelta(hours=96)  # clamp at 4 days (tweak as you like)
+
+last_hit_at = defaultdict(lambda: 0.0)
+
+
 # ---- CLI --------------------------------------------------------------------
 parser = argparse.ArgumentParser(
     "fetch_cube_price",
     description="Fetch price & availability for known vendor links and update DB.",
 )
-# Logging is now optional:
+# Logging is optional:
 parser.add_argument("--log", action="store_true", help="Enable pretty INFO logs.")
 parser.add_argument("--debug", action="store_true", help="Enable DEBUG logs.")
 parser.add_argument(
@@ -59,17 +82,14 @@ parser.add_argument(
 
 
 # ---- DB access --------------------------------------------------------------
-def get_vendor_links() -> list[dict[str, Any]]:
+def get_vendor_links(limit: int = 100) -> list[dict[str, Any]]:
     """
     Pull all vendor links (or a subset with --limit).
     We rely on: cube_vendor_links(id,url,vendor_name,cube_slug,price,available,updated_at)
     """
-    res = (
-        supabase.table("cube_vendor_links")
-        .select("id,url,vendor_name,cube_slug,price,available,updated_at")
-        .order("updated_at", desc=True)
-        .execute()
-    )
+    res = supabase.rpc(
+        "due_vendor_links_capped", {"p_limit": limit, "p_per_vendor": 40}
+    ).execute()
     return res.data or []
 
 
@@ -99,18 +119,20 @@ def update_vendor_link(
             "price": new_price,
             "available": new_available,
             "updated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+            "last_modified": dt.datetime.now(dt.timezone.utc).isoformat(),
+            "streak_unchanged": 0,
         }
     ).eq("id", link["id"]).execute()
 
-    supabase.table("cube_vendor_links_snapshot").insert(
-        {
-            "price": new_price,
-            "available": new_available,
-            "vendor_name": link["vendor_name"],
-            "cube_slug": link["cube_slug"],
-            "url": link["url"],
-        }
-    ).execute()
+
+def save_snapshot(snapshots: list[dict[str, Any]]):
+    supabase.table("cube_vendor_links_snapshot").insert(snapshots).execute()
+
+
+def streak_unchanged(row_id: int, current: Optional[int]):
+    supabase.table("cube_vendor_links").update(
+        {"streak_unchanged": (current or 0) + 1}
+    ).eq("id", row_id).execute()
 
 
 # ---- HTTP fetch -------------------------------------------------------------
@@ -125,12 +147,26 @@ def fetch_page_content(
         "User-Agent": "CubeIndexBot/1.0 (+support@cubeindex.app)",
         "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
     }
-    resp = requests.get(url, headers=headers, timeout=25, allow_redirects=True)
+    resp = requests.get(url, headers=headers, timeout=(5, 12), allow_redirects=True)
     if debug:
         logging.debug("   [HTTP] %s -> %s %s", url, resp.status_code, resp.reason)
         logging.debug("   [HTTP] Final URL: %s", resp.url)
         logging.debug("   [HTTP] Content-Type: %s", resp.headers.get("Content-Type"))
     return resp.status_code, resp.text, dict(resp.headers), resp.url
+
+
+def respect_retry_after(headers: Dict[str, str]) -> float:
+    """
+    Parse Retry-After header; return seconds to wait (fallback 60s if bad date).
+    """
+    ra = headers.get("Retry-After")
+    if not ra:
+        return 0.0
+    try:
+        return float(ra)
+    except ValueError:
+        # HTTP-date; just use a conservative default
+        return 60.0
 
 
 # ---- JSON-LD extraction -----------------------------------------------------
@@ -139,7 +175,6 @@ def extract_json_ld_block(
 ) -> Optional[Dict[str, Any]]:
     """
     Return the first JSON-LD Product node (handles arrays & @graph) or None.
-    extruct extracts structured data like JSON-LD reliably.
     """
     data = extruct.extract(
         html, base_url=get_base_url(html, url), syntaxes=["json-ld"], uniform=True
@@ -356,6 +391,73 @@ def is_supported_vendor(url: str) -> bool:
     return any(v in url for v in SUPPORTED_VENDORS)
 
 
+def vendor_host(url: str) -> str:
+    return (urlparse(url).hostname or "").lower()
+
+
+def throttle_for_vendor(url: str) -> None:
+    """
+    Enforce a minimum interval per vendor host, plus small jitter.
+    """
+    host = vendor_host(url)
+    min_gap = VENDOR_MIN_INTERVAL.get(host, DEFAULT_MIN_INTERVAL)
+    now = time.monotonic()
+    wait = (last_hit_at[host] + min_gap) - now
+    if wait > 0:
+        time.sleep(wait)
+    # jitter
+    time.sleep(random.uniform(*JITTER_RANGE))
+    last_hit_at[host] = time.monotonic()
+
+
+def recently_updated(link: dict[str, Any]) -> bool:
+    """
+    True if link.updated_at is within LINK_COOLDOWN.
+    Expects ISO 8601 with Z or offset.
+    """
+    uat = link.get("updated_at")
+    if not uat:
+        return False
+    try:
+        ts = datetime.fromisoformat(str(uat).replace("Z", "+00:00"))
+    except Exception:
+        return False
+    return datetime.now(timezone.utc) - ts < LINK_COOLDOWN
+
+
+def effective_cooldown(streak: int) -> timedelta:
+    # LINK_COOLDOWN * 2^streak, capped
+    exp = max(0, min(streak, BACKOFF_EXP_CAP))
+    cd = LINK_COOLDOWN * (2**exp)
+    return cd if cd <= MAX_LINK_COOLDOWN else MAX_LINK_COOLDOWN
+
+
+def td_hms(td: timedelta) -> str:
+    secs = int(td.total_seconds())
+    h, rem = divmod(secs, 3600)
+    m, s = divmod(rem, 60)
+    return f"{h:02d}h{m:02d}m{s:02d}s"
+
+
+def backoff_status(link: dict[str, Any]) -> tuple[bool, timedelta, timedelta, int]:
+    """
+    Returns: (in_backoff, remaining, cooldown, streak)
+    """
+    uat = link.get("updated_at")
+    streak = int(link.get("streak_unchanged") or 0)
+    if not uat:
+        return False, timedelta(0), LINK_COOLDOWN, streak
+    try:
+        ts = datetime.fromisoformat(str(uat).replace("Z", "+00:00"))
+    except Exception:
+        return False, timedelta(0), LINK_COOLDOWN, streak
+
+    cooldown = effective_cooldown(streak)
+    elapsed = datetime.now(timezone.utc) - ts
+    remaining = cooldown - elapsed
+    return (remaining > timedelta(0), max(remaining, timedelta(0)), cooldown, streak)
+
+
 # ---- Main -------------------------------------------------------------------
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -376,6 +478,8 @@ if __name__ == "__main__":
         datefmt="[%X]",
         handlers=[RichHandler(rich_tracebacks=True)],
     )
+
+    snapshots = []
 
     console.rule("[bold cyan]CubeIndex Price Tracker")
     console.print("Loading vendor links from database...")
@@ -414,11 +518,28 @@ if __name__ == "__main__":
             cube_slug = link["cube_slug"]
             progress.update(task, description=f"[cyan]{vendor}[/] • {cube_slug}")
 
+            # Skip unsupported vendors early
             if not is_supported_vendor(url):
                 skipped_count += 1
                 logging.warning("0) SKIP    | Unsupported vendor for URL: %s", url)
                 progress.advance(task)
                 continue
+
+            # Skip if within dynamic backoff window
+            in_backoff, remaining, cooldown, streak = backoff_status(link)
+            if in_backoff:
+                skipped_count += 1
+                logging.info(
+                    "0) SKIP    | Backoff active (streak=%s cooldown=%s remaining=%s)",
+                    streak,
+                    td_hms(cooldown),
+                    td_hms(remaining),
+                )
+                progress.advance(task)
+                continue
+
+            # Throttle requests per vendor
+            throttle_for_vendor(url)
 
             # 1) FETCH
             logging.info("1) FETCH   | requesting page...")
@@ -432,6 +553,25 @@ if __name__ == "__main__":
                 progress.advance(task)
                 continue
             logging.info("   FETCHED | HTTP=%s final_url=%s", status, final_url)
+
+            # Handle back-pressure (429 / 503) once
+            if status in (429, 503):
+                wait_for = max(respect_retry_after(headers), 30.0)
+                logging.warning(
+                    "   BACKOFF | status=%s waiting %.1fs", status, wait_for
+                )
+                time.sleep(wait_for)
+                throttle_for_vendor(url)
+                try:
+                    status, html, headers, final_url = fetch_page_content(
+                        url, debug=args.debug
+                    )
+                except Exception as e:
+                    error_count += 1
+                    logging.error("Retry fetch failed: %r", e)
+                    progress.advance(task)
+                    continue
+                logging.info("   RETRIED | HTTP=%s final_url=%s", status, final_url)
 
             if args.save_html:
                 path = ensure_debug_file(html, vendor, cube_slug)
@@ -485,9 +625,19 @@ if __name__ == "__main__":
 
             try:
                 if changed:
+                    snapshots.append(
+                        {
+                            "price": new_price,
+                            "available": new_available,
+                            "vendor_name": link["vendor_name"],
+                            "cube_slug": link["cube_slug"],
+                            "url": link["url"],
+                        }
+                    )
                     update_vendor_link(link, new_price, new_available, reason)
                     changed_count += 1
                 else:
+                    streak_unchanged(link["id"], link.get("streak_unchanged"))
                     logging.info("5) UPDATE  | no changes detected.")
                     unchanged_count += 1
             except Exception as e:
@@ -501,6 +651,9 @@ if __name__ == "__main__":
                 )
 
             progress.advance(task)
+
+    if snapshots:
+        save_snapshot(snapshots)
 
     console.rule("[bold]Summary")
     console.print(
