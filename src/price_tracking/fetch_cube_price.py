@@ -484,9 +484,7 @@ if __name__ == "__main__":
     console.rule("[bold cyan]CubeIndex Price Tracker")
     console.print("Loading vendor links from database...")
 
-    links = get_vendor_links()
-    if args.limit and args.limit > 0:
-        links = links[: args.limit]
+    links = get_vendor_links(args.limit if args.limit > 0 else 100)
 
     if not links:
         console.print("[red]No vendor links found.[/]")
