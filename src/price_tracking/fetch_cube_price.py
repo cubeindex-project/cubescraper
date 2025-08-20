@@ -15,8 +15,6 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 
 import httpx
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 
 # allow "src.common.supabaseClient" import
@@ -37,18 +35,6 @@ from rich.table import Table
 from rich.logging import RichHandler
 
 console = Console()
-
-# Global HTTP session with retry and connection pooling
-session = requests.Session()
-retry_strategy = Retry(
-    total=3,
-    backoff_factor=0.5,
-    status_forcelist=[429, 500, 502, 503, 504],
-    allowed_methods=["HEAD", "GET", "OPTIONS"],
-)
-adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=10, pool_maxsize=10)
-session.mount("http://", adapter)
-session.mount("https://", adapter)
 
 # ---- Supported vendors (hostname fragments) ----
 SUPPORTED_VENDORS = [
@@ -168,8 +154,8 @@ def streak_unchanged(
 
 # ---- HTTP fetch -------------------------------------------------------------
 async def fetch_page_content(
-    url: str, debug: bool = False
-    client: httpx.AsyncClient, url: str,
+    client: httpx.AsyncClient,
+    url: str,
     *,
     etag: Optional[str] = None,
     last_modified: Optional[str] = None,
@@ -184,7 +170,6 @@ async def fetch_page_content(
         "User-Agent": "CubeIndexBot/1.0 (+support@cubeindex.app)",
         "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
     }
-    resp = await session.get(url, headers=headers, timeout=12.0, follow_redirects=True)
     if etag:
         headers["If-None-Match"] = etag
     if last_modified:
@@ -567,6 +552,25 @@ async def process_link(
             return snapshots, change_log, changed_count, unchanged_count, skipped_count, error_count
         logging.info("   FETCHED | HTTP=%s final_url=%s", status, final_url)
 
+        if status == 304:
+            logging.info("   NOTMOD | resource not modified; skipping parse")
+            await asyncio.to_thread(
+                streak_unchanged,
+                link["id"],
+                link.get("streak_unchanged"),
+                headers.get("ETag"),
+                headers.get("Last-Modified"),
+            )
+            unchanged_count = 1
+            return (
+                snapshots,
+                change_log,
+                changed_count,
+                unchanged_count,
+                skipped_count,
+                error_count,
+            )
+
         # Handle back-pressure (429 / 503) once
         if status in (429, 503):
             wait_for = max(respect_retry_after(headers), 30.0)
@@ -590,18 +594,25 @@ async def process_link(
 
             if status == 304:
                 logging.info("   NOTMOD | resource not modified; skipping parse")
-                streak_unchanged(
+                await asyncio.to_thread(
+                    streak_unchanged,
                     link["id"],
                     link.get("streak_unchanged"),
                     headers.get("ETag"),
                     headers.get("Last-Modified"),
                 )
-                unchanged_count += 1
-                progress.advance(task)
-                continue
+                unchanged_count = 1
+                return (
+                    snapshots,
+                    change_log,
+                    changed_count,
+                    unchanged_count,
+                    skipped_count,
+                    error_count,
+                )
 
-            etag_hdr = headers.get("ETag")
-            last_mod_hdr = headers.get("Last-Modified")
+        etag_hdr = headers.get("ETag")
+        last_mod_hdr = headers.get("Last-Modified")
 
         if args.save_html:
             path = await asyncio.to_thread(ensure_debug_file, html, vendor, cube_slug)
@@ -679,12 +690,22 @@ async def process_link(
                     }
                 )
                 await asyncio.to_thread(
-                    update_vendor_link(link, new_price, new_available, reason, etag=etag_hdr, last_modified=last_mod_hdr)
+                    update_vendor_link,
+                    link,
+                    new_price,
+                    new_available,
+                    reason,
+                    etag_hdr,
+                    last_mod_hdr,
                 )
                 changed_count = 1
             else:
                 await asyncio.to_thread(
-                    streak_unchanged(link["id"], link.get("streak_unchanged"), etag_hdr, last_mod_hdr)
+                    streak_unchanged,
+                    link["id"],
+                    link.get("streak_unchanged"),
+                    etag_hdr,
+                    last_mod_hdr,
                 )
                 logging.info("5) UPDATE  | no changes detected.")
                 unchanged_count = 1
