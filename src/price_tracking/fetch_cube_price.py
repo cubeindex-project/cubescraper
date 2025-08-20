@@ -15,8 +15,6 @@ from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
-import extruct
-from w3lib.html import get_base_url
 
 # allow "src.common.supabaseClient" import
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
@@ -177,10 +175,17 @@ def extract_json_ld_block(
     """
     Return the first JSON-LD Product node (handles arrays & @graph) or None.
     """
-    data = extruct.extract(
-        html, base_url=get_base_url(html, url), syntaxes=["json-ld"], uniform=True
-    )
-    blocks = data.get("json-ld", []) or []
+    soup = BeautifulSoup(html, "lxml")
+    blocks: list[Any] = []
+    for tag in soup.find_all("script", type="application/ld+json"):
+        try:
+            text = tag.string or tag.get_text()
+            if not text:
+                continue
+            blocks.append(json.loads(text))
+        except Exception as e:
+            if debug:
+                logging.debug("   [JSON-LD] Failed to parse block: %r", e)
     if debug:
         logging.debug("   [JSON-LD] Found %d block(s).", len(blocks))
 
