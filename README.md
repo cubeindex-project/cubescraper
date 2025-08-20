@@ -60,6 +60,12 @@ Periodically update prices and availability for known vendor links:
 python src/price_tracking/fetch_cube_price.py --limit 20 --log
 ```
 
+Force check all supported links (ignoring cooldown) with:
+
+```
+python src/price_tracking/fetch_cube_price.py --force --log
+```
+
 ## License
 
 This project is available under the MIT License.  See `LICENSE` for details.

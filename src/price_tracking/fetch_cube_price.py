@@ -73,19 +73,31 @@ parser.add_argument(
 parser.add_argument(
     "--limit", type=int, default=0, help="Only process the first N links (0 = all)."
 )
+parser.add_argument(
+    "--force",
+    action="store_true",
+    help="Force check all links, ignoring cooldown/backoff (unsupported skipped)",
+)
 
 
 # ---- DB access --------------------------------------------------------------
-def get_vendor_links(limit: int = 100) -> list[dict[str, Any]]:
+def get_vendor_links(limit: int = 100, force: bool = False) -> list[dict[str, Any]]:
     """
-    Pull all vendor links (or a subset with --limit).
-    We rely on: cube_vendor_links(id,url,vendor_name,cube_slug,price,available,updated_at)
+    Pull vendor links from the database.
+
+    When ``force`` is True all known links up to ``limit`` are returned
+    (ignoring the usual due/backoff filtering) while unsupported vendors
+    are skipped.  Otherwise only due links are returned.
     """
+    if force:
+        res = (
+            supabase.table("cube_vendor_links").select("*").limit(limit).execute()
+        )
+        data = res.data or []
+        return [l for l in data if is_supported_vendor(l.get("url", ""))]
     res = supabase.rpc(
         "due_vendor_links_capped", {"p_limit": limit, "p_per_vendor": 40}
     ).execute()
-    # Select query to speed up debugging
-    # res = supabase.table("cube_vendor_links").select("*").execute()
     return res.data or []
 
 
@@ -528,7 +540,7 @@ async def process_link(
             )
 
         in_backoff, remaining, cooldown, streak = backoff_status(link)
-        if in_backoff:
+        if in_backoff and not args.force:
             skipped_count = 1
             logging.info(
                 "0) SKIP    | Backoff active (streak=%s cooldown=%s remaining=%s)",
@@ -771,7 +783,9 @@ if __name__ == "__main__":
     console.rule("[bold cyan]CubeIndex Price Tracker")
     console.print("Loading vendor links from database...")
 
-    links = get_vendor_links(args.limit if args.limit > 0 else 100)
+    links = get_vendor_links(
+        args.limit if args.limit > 0 else 100, force=args.force
+    )
 
     if not links:
         console.print("[red]No vendor links found.[/]")
