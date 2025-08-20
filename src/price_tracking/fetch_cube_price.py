@@ -657,7 +657,7 @@ async def process_link(
         # 2) JSON-LD
         logging.info("2) JSON-LD | extracting structured data...")
         price, available, raw = None, None, {}
-        product_node = extract_json_ld_block(html, final_url, debug=args.debug)
+        product_node = extract_json_ld_block(html, debug=args.debug)
         if product_node:
             price, available, raw = extract_from_json_ld(product_node, debug=args.debug)
         logging.info("   JSON-LD | price=%s available=%s", price, available)
