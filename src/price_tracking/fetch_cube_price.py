@@ -1,12 +1,4 @@
-import sys
-import os
-import argparse
-import json
-import logging
-import re
-import asyncio
-import time
-import random
+import sys, os, argparse, json, logging, re, asyncio, time, random
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
@@ -202,7 +194,7 @@ def respect_retry_after(headers: Dict[str, str]) -> float:
 
 # ---- JSON-LD extraction -----------------------------------------------------
 def extract_json_ld_block(
-    html: str, url: str, debug: bool = False
+    html: str, debug: bool = False
 ) -> Optional[Dict[str, Any]]:
     """
     Return the first JSON-LD Product node (handles arrays & @graph) or None.
