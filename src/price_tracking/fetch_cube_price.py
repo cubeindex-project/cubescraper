@@ -92,6 +92,8 @@ def get_vendor_links(limit: int = 100) -> list[dict[str, Any]]:
     res = supabase.rpc(
         "due_vendor_links_capped", {"p_limit": limit, "p_per_vendor": 40}
     ).execute()
+    # Select query to speed up debugging
+    # res = supabase.table("cube_vendor_links").select("*").execute()
     return res.data or []
 
 
@@ -176,7 +178,9 @@ async def fetch_page_content(
         headers["If-Modified-Since"] = last_modified
     resp = await client.get(url, headers=headers, timeout=12.0, follow_redirects=True)
     if debug:
-        logging.debug("   [HTTP] %s -> %s %s", url, resp.status_code, resp.reason_phrase)
+        logging.debug(
+            "   [HTTP] %s -> %s %s", url, resp.status_code, resp.reason_phrase
+        )
         logging.debug("   [HTTP] Final URL: %s", resp.url)
         logging.debug("   [HTTP] Content-Type: %s", resp.headers.get("Content-Type"))
     return resp.status_code, resp.text, dict(resp.headers), str(resp.url)
@@ -522,7 +526,14 @@ async def process_link(
         if not is_supported_vendor(url):
             skipped_count = 1
             logging.warning("0) SKIP    | Unsupported vendor for URL: %s", url)
-            return snapshots, change_log, changed_count, unchanged_count, skipped_count, error_count
+            return (
+                snapshots,
+                change_log,
+                changed_count,
+                unchanged_count,
+                skipped_count,
+                error_count,
+            )
 
         in_backoff, remaining, cooldown, streak = backoff_status(link)
         if in_backoff:
@@ -533,7 +544,14 @@ async def process_link(
                 td_hms(cooldown),
                 td_hms(remaining),
             )
-            return snapshots, change_log, changed_count, unchanged_count, skipped_count, error_count
+            return (
+                snapshots,
+                change_log,
+                changed_count,
+                unchanged_count,
+                skipped_count,
+                error_count,
+            )
 
         await throttle_for_vendor(url)
 
@@ -541,15 +559,23 @@ async def process_link(
         logging.info("1) FETCH   | requesting page...")
         try:
             status, html, headers, final_url = await fetch_page_content(
-                client, url,
-                    etag=link.get("etag"),
-                    last_modified=link.get("last_modified"),
-                    debug=args.debug,
+                client,
+                url,
+                etag=link.get("etag"),
+                last_modified=link.get("last_modified"),
+                debug=args.debug,
             )
         except Exception as e:
             error_count = 1
             logging.error("Fetch failed: %r", e)
-            return snapshots, change_log, changed_count, unchanged_count, skipped_count, error_count
+            return (
+                snapshots,
+                change_log,
+                changed_count,
+                unchanged_count,
+                skipped_count,
+                error_count,
+            )
         logging.info("   FETCHED | HTTP=%s final_url=%s", status, final_url)
 
         if status == 304:
@@ -574,22 +600,28 @@ async def process_link(
         # Handle back-pressure (429 / 503) once
         if status in (429, 503):
             wait_for = max(respect_retry_after(headers), 30.0)
-            logging.warning(
-                "   BACKOFF | status=%s waiting %.1fs", status, wait_for
-            )
+            logging.warning("   BACKOFF | status=%s waiting %.1fs", status, wait_for)
             await asyncio.sleep(wait_for)
             await throttle_for_vendor(url)
             try:
                 status, html, headers, final_url = await fetch_page_content(
-                    client, url,
-                        etag=link.get("etag"),
-                        last_modified=link.get("last_modified"),
-                        debug=args.debug,
+                    client,
+                    url,
+                    etag=link.get("etag"),
+                    last_modified=link.get("last_modified"),
+                    debug=args.debug,
                 )
             except Exception as e:
                 error_count = 1
                 logging.error("Retry fetch failed: %r", e)
-                return snapshots, change_log, changed_count, unchanged_count, skipped_count, error_count
+                return (
+                    snapshots,
+                    change_log,
+                    changed_count,
+                    unchanged_count,
+                    skipped_count,
+                    error_count,
+                )
             logging.info("   RETRIED | HTTP=%s final_url=%s", status, final_url)
 
             if status == 304:
@@ -623,9 +655,7 @@ async def process_link(
         price, available, raw = None, None, {}
         product_node = extract_json_ld_block(html, final_url, debug=args.debug)
         if product_node:
-            price, available, raw = extract_from_json_ld(
-                product_node, debug=args.debug
-            )
+            price, available, raw = extract_from_json_ld(product_node, debug=args.debug)
         logging.info("   JSON-LD | price=%s available=%s", price, available)
 
         # 3) HTML fallback
@@ -641,9 +671,7 @@ async def process_link(
 
         # 4) DECIDE availability
         logging.info("4) DECIDE  | merging HTTP + parse signals...")
-        final_available, reason = decide_available(
-            status, available, debug=args.debug
-        )
+        final_available, reason = decide_available(status, available, debug=args.debug)
         logging.info(
             "   DECIDE  | final_available=%s reason=%s", final_available, reason
         )
@@ -654,9 +682,7 @@ async def process_link(
             final_available if final_available is not None else link["available"]
         )
 
-        changed = (new_price != link["price"]) or (
-            new_available != link["available"]
-        )
+        changed = (new_price != link["price"]) or (new_available != link["available"])
         logging.info(
             "   CHECK   | changed=%s (old_price=%s old_av=%s)",
             changed,
@@ -715,11 +741,16 @@ async def process_link(
 
         if args.debug:
             # Truncate raw signals to avoid huge logs
-            logging.debug(
-                "RAW SIGNALS: %s", json.dumps(raw, ensure_ascii=False)[:2000]
-            )
+            logging.debug("RAW SIGNALS: %s", json.dumps(raw, ensure_ascii=False)[:2000])
 
-        return snapshots, change_log, changed_count, unchanged_count, skipped_count, error_count
+        return (
+            snapshots,
+            change_log,
+            changed_count,
+            unchanged_count,
+            skipped_count,
+            error_count,
+        )
     finally:
         progress.advance(task_id)
 
@@ -757,7 +788,9 @@ if __name__ == "__main__":
     total = len(links)
     console.print(f"[green]Found {total} link(s). Starting run...[/]")
 
-    async def runner() -> list[tuple[list[dict[str, Any]], list[dict[str, Any]], int, int, int, int]]:
+    async def runner() -> (
+        list[tuple[list[dict[str, Any]], list[dict[str, Any]], int, int, int, int]]
+    ):
         async with httpx.AsyncClient() as client:
             with Progress(
                 TextColumn("[bold]{task.description}"),
