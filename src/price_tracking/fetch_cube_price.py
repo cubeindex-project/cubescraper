@@ -32,6 +32,7 @@ from rich.progress import (
     TimeElapsedColumn,
     TimeRemainingColumn,
 )
+from rich.table import Table
 from rich.logging import RichHandler
 
 console = Console()
@@ -509,6 +510,7 @@ if __name__ == "__main__":
         unchanged_count = 0
         skipped_count = 0
         error_count = 0
+        change_log: list[dict[str, Any]] = []
 
         for link in links:
             vendor = link["vendor_name"]
@@ -623,6 +625,22 @@ if __name__ == "__main__":
 
             try:
                 if changed:
+                    field_changes = []
+                    if new_price != link["price"]:
+                        field_changes.append(
+                            ("price", link["price"], new_price)
+                        )
+                    if new_available != link["available"]:
+                        field_changes.append(
+                            ("available", link["available"], new_available)
+                        )
+                    change_log.append(
+                        {
+                            "vendor_name": link["vendor_name"],
+                            "cube_slug": link["cube_slug"],
+                            "changes": field_changes,
+                        }
+                    )
                     snapshots.append(
                         {
                             "price": new_price,
@@ -660,3 +678,16 @@ if __name__ == "__main__":
         f"[blue]Skipped:[/] {skipped_count}  "
         f"[red]Errors:[/]{error_count}"
     )
+    if change_log:
+        table = Table(title="Updated Fields")
+        table.add_column("Vendor")
+        table.add_column("Cube")
+        table.add_column("Field")
+        table.add_column("Old")
+        table.add_column("New")
+        for entry in change_log:
+            vendor = entry["vendor_name"]
+            cube = entry["cube_slug"]
+            for field, old, new in entry["changes"]:
+                table.add_row(vendor, cube, field, str(old), str(new))
+        console.print(table)
