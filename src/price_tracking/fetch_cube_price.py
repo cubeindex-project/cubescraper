@@ -137,10 +137,6 @@ def update_vendor_link(
     supabase.table("cube_vendor_links").update(updates).eq("id", link["id"]).execute()
 
 
-def save_snapshot(snapshots: list[dict[str, Any]]):
-    supabase.table("cube_vendor_links_snapshot").insert(snapshots).execute()
-
-
 def streak_unchanged(
     row_id: int,
     current: Optional[int],
@@ -509,17 +505,16 @@ async def process_link(
     progress: Progress,
     task_id: int,
     args: argparse.Namespace,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int, int, int, int]:
+) -> tuple[list[dict[str, Any]], int, int, int, int]:
     """Process a single vendor link and return its outcome.
 
-    Returns a tuple of ``(snapshots, change_log, changed, unchanged, skipped, error)``.
+    Returns a tuple of ``(change_log, changed, unchanged, skipped, error)``.
     """
     vendor = link["vendor_name"]
     url = link["url"]
     cube_slug = link["cube_slug"]
     progress.update(task_id, description=f"[cyan]{vendor}[/] • {cube_slug}")
 
-    snapshots: list[dict[str, Any]] = []
     change_log: list[dict[str, Any]] = []
     changed_count = 0
     unchanged_count = 0
@@ -531,7 +526,6 @@ async def process_link(
             skipped_count = 1
             logging.warning("0) SKIP    | Unsupported vendor for URL: %s", url)
             return (
-                snapshots,
                 change_log,
                 changed_count,
                 unchanged_count,
@@ -549,7 +543,6 @@ async def process_link(
                 td_hms(remaining),
             )
             return (
-                snapshots,
                 change_log,
                 changed_count,
                 unchanged_count,
@@ -573,7 +566,6 @@ async def process_link(
             error_count = 1
             logging.error("Fetch failed: %r", e)
             return (
-                snapshots,
                 change_log,
                 changed_count,
                 unchanged_count,
@@ -593,7 +585,6 @@ async def process_link(
             )
             unchanged_count = 1
             return (
-                snapshots,
                 change_log,
                 changed_count,
                 unchanged_count,
@@ -619,7 +610,6 @@ async def process_link(
                 error_count = 1
                 logging.error("Retry fetch failed: %r", e)
                 return (
-                    snapshots,
                     change_log,
                     changed_count,
                     unchanged_count,
@@ -639,7 +629,6 @@ async def process_link(
                 )
                 unchanged_count = 1
                 return (
-                    snapshots,
                     change_log,
                     changed_count,
                     unchanged_count,
@@ -710,15 +699,6 @@ async def process_link(
                         "changes": field_changes,
                     }
                 )
-                snapshots.append(
-                    {
-                        "price": new_price,
-                        "available": new_available,
-                        "vendor_name": link["vendor_name"],
-                        "cube_slug": link["cube_slug"],
-                        "url": link["url"],
-                    }
-                )
                 await asyncio.to_thread(
                     update_vendor_link,
                     link,
@@ -748,7 +728,6 @@ async def process_link(
             logging.debug("RAW SIGNALS: %s", json.dumps(raw, ensure_ascii=False)[:2000])
 
         return (
-            snapshots,
             change_log,
             changed_count,
             unchanged_count,
@@ -795,7 +774,7 @@ if __name__ == "__main__":
     console.print(f"[green]Found {total} link(s). Starting run...[/]")
 
     async def runner() -> (
-        list[tuple[list[dict[str, Any]], list[dict[str, Any]], int, int, int, int]]
+        list[tuple[list[dict[str, Any]], int, int, int, int]]
     ):
         async with httpx.AsyncClient() as client:
             with Progress(
@@ -818,22 +797,17 @@ if __name__ == "__main__":
 
     results = asyncio.run(runner())
 
-    snapshots: list[dict[str, Any]] = []
     change_log: list[dict[str, Any]] = []
     changed_count = 0
     unchanged_count = 0
     skipped_count = 0
     error_count = 0
-    for snap, clog, changed, unchanged, skipped, error in results:
-        snapshots.extend(snap)
+    for clog, changed, unchanged, skipped, error in results:
         change_log.extend(clog)
         changed_count += changed
         unchanged_count += unchanged
         skipped_count += skipped
         error_count += error
-
-    if snapshots:
-        save_snapshot(snapshots)
 
     console.rule("[bold]Summary")
     console.print(
