@@ -4,16 +4,17 @@ import argparse
 import json
 import logging
 import re
+import asyncio
 import time
 import random
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Iterable
+from typing import Any, Dict, Optional, Tuple
 import datetime as dt
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 
-import requests
+import httpx
 from bs4 import BeautifulSoup
 import extruct
 from w3lib.html import get_base_url
@@ -60,8 +61,10 @@ LINK_COOLDOWN = timedelta(hours=12)
 
 BACKOFF_EXP_CAP = 4  # stop doubling after 2^4 (tweak as you like)
 MAX_LINK_COOLDOWN = timedelta(hours=96)  # clamp at 4 days (tweak as you like)
+WORKER_CONCURRENCY = 10
 
 last_hit_at = defaultdict(lambda: 0.0)
+vendor_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
 
 # ---- CLI --------------------------------------------------------------------
@@ -137,23 +140,23 @@ def streak_unchanged(row_id: int, current: Optional[int]):
 
 
 # ---- HTTP fetch -------------------------------------------------------------
-def fetch_page_content(
-    url: str, debug: bool = False
+async def fetch_page_content(
+    client: httpx.AsyncClient, url: str, debug: bool = False
 ) -> Tuple[int, str, Dict[str, str], str]:
-    """
-    Fetch a product page with a polite UA and sensible timeout.
-    Returns: (status_code, html, headers, final_url)
+    """Fetch a product page with a polite UA and sensible timeout.
+
+    Returns a tuple of ``(status_code, html, headers, final_url)``.
     """
     headers = {
         "User-Agent": "CubeIndexBot/1.0 (+support@cubeindex.app)",
         "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
     }
-    resp = requests.get(url, headers=headers, timeout=(5, 12), allow_redirects=True)
+    resp = await client.get(url, headers=headers, timeout=12.0, follow_redirects=True)
     if debug:
-        logging.debug("   [HTTP] %s -> %s %s", url, resp.status_code, resp.reason)
+        logging.debug("   [HTTP] %s -> %s %s", url, resp.status_code, resp.reason_phrase)
         logging.debug("   [HTTP] Final URL: %s", resp.url)
         logging.debug("   [HTTP] Content-Type: %s", resp.headers.get("Content-Type"))
-    return resp.status_code, resp.text, dict(resp.headers), resp.url
+    return resp.status_code, resp.text, dict(resp.headers), str(resp.url)
 
 
 def respect_retry_after(headers: Dict[str, str]) -> float:
@@ -396,19 +399,22 @@ def vendor_host(url: str) -> str:
     return (urlparse(url).hostname or "").lower()
 
 
-def throttle_for_vendor(url: str) -> None:
-    """
-    Enforce a minimum interval per vendor host, plus small jitter.
+async def throttle_for_vendor(url: str) -> None:
+    """Enforce a minimum interval per vendor host, plus small jitter.
+
+    A lock is used per vendor so different vendors can run in parallel while
+    requests for the same vendor are serialized and respect ``VENDOR_MIN_INTERVAL``.
     """
     host = vendor_host(url)
-    min_gap = VENDOR_MIN_INTERVAL.get(host, DEFAULT_MIN_INTERVAL)
-    now = time.monotonic()
-    wait = (last_hit_at[host] + min_gap) - now
-    if wait > 0:
-        time.sleep(wait)
-    # jitter
-    time.sleep(random.uniform(*JITTER_RANGE))
-    last_hit_at[host] = time.monotonic()
+    lock = vendor_locks[host]
+    async with lock:
+        min_gap = VENDOR_MIN_INTERVAL.get(host, DEFAULT_MIN_INTERVAL)
+        now = time.monotonic()
+        wait = (last_hit_at[host] + min_gap) - now
+        if wait > 0:
+            await asyncio.sleep(wait)
+        await asyncio.sleep(random.uniform(*JITTER_RANGE))
+        last_hit_at[host] = time.monotonic()
 
 
 def recently_updated(link: dict[str, Any]) -> bool:
@@ -459,6 +465,178 @@ def backoff_status(link: dict[str, Any]) -> tuple[bool, timedelta, timedelta, in
     return (remaining > timedelta(0), max(remaining, timedelta(0)), cooldown, streak)
 
 
+async def process_link(
+    link: dict[str, Any],
+    client: httpx.AsyncClient,
+    progress: Progress,
+    task_id: int,
+    args: argparse.Namespace,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int, int, int, int]:
+    """Process a single vendor link and return its outcome.
+
+    Returns a tuple of ``(snapshots, change_log, changed, unchanged, skipped, error)``.
+    """
+    vendor = link["vendor_name"]
+    url = link["url"]
+    cube_slug = link["cube_slug"]
+    progress.update(task_id, description=f"[cyan]{vendor}[/] • {cube_slug}")
+
+    snapshots: list[dict[str, Any]] = []
+    change_log: list[dict[str, Any]] = []
+    changed_count = 0
+    unchanged_count = 0
+    skipped_count = 0
+    error_count = 0
+
+    try:
+        if not is_supported_vendor(url):
+            skipped_count = 1
+            logging.warning("0) SKIP    | Unsupported vendor for URL: %s", url)
+            return snapshots, change_log, changed_count, unchanged_count, skipped_count, error_count
+
+        in_backoff, remaining, cooldown, streak = backoff_status(link)
+        if in_backoff:
+            skipped_count = 1
+            logging.info(
+                "0) SKIP    | Backoff active (streak=%s cooldown=%s remaining=%s)",
+                streak,
+                td_hms(cooldown),
+                td_hms(remaining),
+            )
+            return snapshots, change_log, changed_count, unchanged_count, skipped_count, error_count
+
+        await throttle_for_vendor(url)
+
+        # 1) FETCH
+        logging.info("1) FETCH   | requesting page...")
+        try:
+            status, html, headers, final_url = await fetch_page_content(
+                client, url, debug=args.debug
+            )
+        except Exception as e:
+            error_count = 1
+            logging.error("Fetch failed: %r", e)
+            return snapshots, change_log, changed_count, unchanged_count, skipped_count, error_count
+        logging.info("   FETCHED | HTTP=%s final_url=%s", status, final_url)
+
+        # Handle back-pressure (429 / 503) once
+        if status in (429, 503):
+            wait_for = max(respect_retry_after(headers), 30.0)
+            logging.warning(
+                "   BACKOFF | status=%s waiting %.1fs", status, wait_for
+            )
+            await asyncio.sleep(wait_for)
+            await throttle_for_vendor(url)
+            try:
+                status, html, headers, final_url = await fetch_page_content(
+                    client, url, debug=args.debug
+                )
+            except Exception as e:
+                error_count = 1
+                logging.error("Retry fetch failed: %r", e)
+                return snapshots, change_log, changed_count, unchanged_count, skipped_count, error_count
+            logging.info("   RETRIED | HTTP=%s final_url=%s", status, final_url)
+
+        if args.save_html:
+            path = await asyncio.to_thread(ensure_debug_file, html, vendor, cube_slug)
+            logging.info("   SAVED   | HTML -> %s", path)
+
+        # 2) JSON-LD
+        logging.info("2) JSON-LD | extracting structured data...")
+        price, available, raw = None, None, {}
+        product_node = extract_json_ld_block(html, final_url, debug=args.debug)
+        if product_node:
+            price, available, raw = extract_from_json_ld(
+                product_node, debug=args.debug
+            )
+        logging.info("   JSON-LD | price=%s available=%s", price, available)
+
+        # 3) HTML fallback
+        if price is None or available is None:
+            logging.info("3) HTML    | falling back to HTML heuristics...")
+            p2, a2, raw2 = extract_from_html(final_url, html, debug=args.debug)
+            if price is None:
+                price = p2
+            if available is None:
+                available = a2
+            raw.update(raw2)
+        logging.info("   HTML    | price=%s available=%s", price, available)
+
+        # 4) DECIDE availability
+        logging.info("4) DECIDE  | merging HTTP + parse signals...")
+        final_available, reason = decide_available(
+            status, available, debug=args.debug
+        )
+        logging.info(
+            "   DECIDE  | final_available=%s reason=%s", final_available, reason
+        )
+
+        # Compare vs DB row; don’t lose explicit False/0.00
+        new_price = price if price is not None else link["price"]
+        new_available = (
+            final_available if final_available is not None else link["available"]
+        )
+
+        changed = (new_price != link["price"]) or (
+            new_available != link["available"]
+        )
+        logging.info(
+            "   CHECK   | changed=%s (old_price=%s old_av=%s)",
+            changed,
+            link["price"],
+            link["available"],
+        )
+
+        try:
+            if changed:
+                field_changes = []
+                if new_price != link["price"]:
+                    field_changes.append(("price", link["price"], new_price))
+                if new_available != link["available"]:
+                    field_changes.append(
+                        ("available", link["available"], new_available)
+                    )
+                change_log.append(
+                    {
+                        "vendor_name": link["vendor_name"],
+                        "cube_slug": link["cube_slug"],
+                        "changes": field_changes,
+                    }
+                )
+                snapshots.append(
+                    {
+                        "price": new_price,
+                        "available": new_available,
+                        "vendor_name": link["vendor_name"],
+                        "cube_slug": link["cube_slug"],
+                        "url": link["url"],
+                    }
+                )
+                await asyncio.to_thread(
+                    update_vendor_link, link, new_price, new_available, reason
+                )
+                changed_count = 1
+            else:
+                await asyncio.to_thread(
+                    streak_unchanged, link["id"], link.get("streak_unchanged")
+                )
+                logging.info("5) UPDATE  | no changes detected.")
+                unchanged_count = 1
+        except Exception as e:
+            error_count = 1
+            logging.error("DB update failed: %r", e)
+
+        if args.debug:
+            # Truncate raw signals to avoid huge logs
+            logging.debug(
+                "RAW SIGNALS: %s", json.dumps(raw, ensure_ascii=False)[:2000]
+            )
+
+        return snapshots, change_log, changed_count, unchanged_count, skipped_count, error_count
+    finally:
+        progress.advance(task_id)
+
+
 # ---- Main -------------------------------------------------------------------
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -480,8 +658,6 @@ if __name__ == "__main__":
         handlers=[RichHandler(rich_tracebacks=True)],
     )
 
-    snapshots = []
-
     console.rule("[bold cyan]CubeIndex Price Tracker")
     console.print("Loading vendor links from database...")
 
@@ -494,179 +670,41 @@ if __name__ == "__main__":
     total = len(links)
     console.print(f"[green]Found {total} link(s). Starting run...[/]")
 
-    # Always-on progress bar
-    with Progress(
-        TextColumn("[bold]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        TimeElapsedColumn(),
-        TimeRemainingColumn(),
-        transient=False,
-        console=console,
-    ) as progress:
-        task = progress.add_task("Processing", total=total)
+    async def runner() -> list[tuple[list[dict[str, Any]], list[dict[str, Any]], int, int, int, int]]:
+        async with httpx.AsyncClient() as client:
+            with Progress(
+                TextColumn("[bold]{task.description}"),
+                BarColumn(),
+                TaskProgressColumn(),
+                TimeElapsedColumn(),
+                TimeRemainingColumn(),
+                transient=False,
+                console=console,
+            ) as progress:
+                task = progress.add_task("Processing", total=total)
+                sem = asyncio.Semaphore(WORKER_CONCURRENCY)
 
-        changed_count = 0
-        unchanged_count = 0
-        skipped_count = 0
-        error_count = 0
-        change_log: list[dict[str, Any]] = []
+                async def sem_task(link: dict[str, Any]):
+                    async with sem:
+                        return await process_link(link, client, progress, task, args)
 
-        for link in links:
-            vendor = link["vendor_name"]
-            url = link["url"]
-            cube_slug = link["cube_slug"]
-            progress.update(task, description=f"[cyan]{vendor}[/] • {cube_slug}")
+                return await asyncio.gather(*(sem_task(l) for l in links))
 
-            # Skip unsupported vendors early
-            if not is_supported_vendor(url):
-                skipped_count += 1
-                logging.warning("0) SKIP    | Unsupported vendor for URL: %s", url)
-                progress.advance(task)
-                continue
+    results = asyncio.run(runner())
 
-            # Skip if within dynamic backoff window
-            in_backoff, remaining, cooldown, streak = backoff_status(link)
-            if in_backoff:
-                skipped_count += 1
-                logging.info(
-                    "0) SKIP    | Backoff active (streak=%s cooldown=%s remaining=%s)",
-                    streak,
-                    td_hms(cooldown),
-                    td_hms(remaining),
-                )
-                progress.advance(task)
-                continue
-
-            # Throttle requests per vendor
-            throttle_for_vendor(url)
-
-            # 1) FETCH
-            logging.info("1) FETCH   | requesting page...")
-            try:
-                status, html, headers, final_url = fetch_page_content(
-                    url, debug=args.debug
-                )
-            except Exception as e:
-                error_count += 1
-                logging.error("Fetch failed: %r", e)
-                progress.advance(task)
-                continue
-            logging.info("   FETCHED | HTTP=%s final_url=%s", status, final_url)
-
-            # Handle back-pressure (429 / 503) once
-            if status in (429, 503):
-                wait_for = max(respect_retry_after(headers), 30.0)
-                logging.warning(
-                    "   BACKOFF | status=%s waiting %.1fs", status, wait_for
-                )
-                time.sleep(wait_for)
-                throttle_for_vendor(url)
-                try:
-                    status, html, headers, final_url = fetch_page_content(
-                        url, debug=args.debug
-                    )
-                except Exception as e:
-                    error_count += 1
-                    logging.error("Retry fetch failed: %r", e)
-                    progress.advance(task)
-                    continue
-                logging.info("   RETRIED | HTTP=%s final_url=%s", status, final_url)
-
-            if args.save_html:
-                path = ensure_debug_file(html, vendor, cube_slug)
-                logging.info("   SAVED   | HTML -> %s", path)
-
-            # 2) JSON-LD
-            logging.info("2) JSON-LD | extracting structured data...")
-            price, available, raw = None, None, {}
-            product_node = extract_json_ld_block(html, final_url, debug=args.debug)
-            if product_node:
-                price, available, raw = extract_from_json_ld(
-                    product_node, debug=args.debug
-                )
-            logging.info("   JSON-LD | price=%s available=%s", price, available)
-
-            # 3) HTML fallback
-            if price is None or available is None:
-                logging.info("3) HTML    | falling back to HTML heuristics...")
-                p2, a2, raw2 = extract_from_html(final_url, html, debug=args.debug)
-                if price is None:
-                    price = p2
-                if available is None:
-                    available = a2
-                raw.update(raw2)
-            logging.info("   HTML    | price=%s available=%s", price, available)
-
-            # 4) DECIDE availability
-            logging.info("4) DECIDE  | merging HTTP + parse signals...")
-            final_available, reason = decide_available(
-                status, available, debug=args.debug
-            )
-            logging.info(
-                "   DECIDE  | final_available=%s reason=%s", final_available, reason
-            )
-
-            # Compare vs DB row; don’t lose explicit False/0.00
-            new_price = price if price is not None else link["price"]
-            new_available = (
-                final_available if final_available is not None else link["available"]
-            )
-
-            changed = (new_price != link["price"]) or (
-                new_available != link["available"]
-            )
-            logging.info(
-                "   CHECK   | changed=%s (old_price=%s old_av=%s)",
-                changed,
-                link["price"],
-                link["available"],
-            )
-
-            try:
-                if changed:
-                    field_changes = []
-                    if new_price != link["price"]:
-                        field_changes.append(
-                            ("price", link["price"], new_price)
-                        )
-                    if new_available != link["available"]:
-                        field_changes.append(
-                            ("available", link["available"], new_available)
-                        )
-                    change_log.append(
-                        {
-                            "vendor_name": link["vendor_name"],
-                            "cube_slug": link["cube_slug"],
-                            "changes": field_changes,
-                        }
-                    )
-                    snapshots.append(
-                        {
-                            "price": new_price,
-                            "available": new_available,
-                            "vendor_name": link["vendor_name"],
-                            "cube_slug": link["cube_slug"],
-                            "url": link["url"],
-                        }
-                    )
-                    update_vendor_link(link, new_price, new_available, reason)
-                    changed_count += 1
-                else:
-                    streak_unchanged(link["id"], link.get("streak_unchanged"))
-                    logging.info("5) UPDATE  | no changes detected.")
-                    unchanged_count += 1
-            except Exception as e:
-                error_count += 1
-                logging.error("DB update failed: %r", e)
-
-            if args.debug:
-                # Truncate raw signals to avoid huge logs
-                logging.debug(
-                    "RAW SIGNALS: %s", json.dumps(raw, ensure_ascii=False)[:2000]
-                )
-
-            progress.advance(task)
+    snapshots: list[dict[str, Any]] = []
+    change_log: list[dict[str, Any]] = []
+    changed_count = 0
+    unchanged_count = 0
+    skipped_count = 0
+    error_count = 0
+    for snap, clog, changed, unchanged, skipped, error in results:
+        snapshots.extend(snap)
+        change_log.extend(clog)
+        changed_count += changed
+        unchanged_count += unchanged
+        skipped_count += skipped
+        error_count += error
 
     if snapshots:
         save_snapshot(snapshots)
