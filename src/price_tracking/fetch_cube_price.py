@@ -15,6 +15,8 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 
 import httpx
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 
 # allow "src.common.supabaseClient" import
@@ -35,6 +37,18 @@ from rich.table import Table
 from rich.logging import RichHandler
 
 console = Console()
+
+# Global HTTP session with retry and connection pooling
+session = requests.Session()
+retry_strategy = Retry(
+    total=3,
+    backoff_factor=0.5,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["HEAD", "GET", "OPTIONS"],
+)
+adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=10, pool_maxsize=10)
+session.mount("http://", adapter)
+session.mount("https://", adapter)
 
 # ---- Supported vendors (hostname fragments) ----
 SUPPORTED_VENDORS = [
@@ -154,6 +168,7 @@ def streak_unchanged(
 
 # ---- HTTP fetch -------------------------------------------------------------
 async def fetch_page_content(
+    url: str, debug: bool = False
     client: httpx.AsyncClient, url: str,
     *,
     etag: Optional[str] = None,
@@ -169,6 +184,7 @@ async def fetch_page_content(
         "User-Agent": "CubeIndexBot/1.0 (+support@cubeindex.app)",
         "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
     }
+    resp = await session.get(url, headers=headers, timeout=12.0, follow_redirects=True)
     if etag:
         headers["If-None-Match"] = etag
     if last_modified:
