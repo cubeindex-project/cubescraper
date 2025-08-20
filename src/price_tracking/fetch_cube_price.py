@@ -14,6 +14,8 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 import extruct
 from w3lib.html import get_base_url
@@ -36,6 +38,18 @@ from rich.table import Table
 from rich.logging import RichHandler
 
 console = Console()
+
+# Global HTTP session with retry and connection pooling
+session = requests.Session()
+retry_strategy = Retry(
+    total=3,
+    backoff_factor=0.5,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["HEAD", "GET", "OPTIONS"],
+)
+adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=10, pool_maxsize=10)
+session.mount("http://", adapter)
+session.mount("https://", adapter)
 
 # ---- Supported vendors (hostname fragments) ----
 SUPPORTED_VENDORS = [
@@ -148,7 +162,7 @@ def fetch_page_content(
         "User-Agent": "CubeIndexBot/1.0 (+support@cubeindex.app)",
         "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
     }
-    resp = requests.get(url, headers=headers, timeout=(5, 12), allow_redirects=True)
+    resp = session.get(url, headers=headers, timeout=(5, 12), allow_redirects=True)
     if debug:
         logging.debug("   [HTTP] %s -> %s %s", url, resp.status_code, resp.reason)
         logging.debug("   [HTTP] Final URL: %s", resp.url)
@@ -627,9 +641,7 @@ if __name__ == "__main__":
                 if changed:
                     field_changes = []
                     if new_price != link["price"]:
-                        field_changes.append(
-                            ("price", link["price"], new_price)
-                        )
+                        field_changes.append(("price", link["price"], new_price))
                     if new_available != link["available"]:
                         field_changes.append(
                             ("available", link["available"], new_available)
