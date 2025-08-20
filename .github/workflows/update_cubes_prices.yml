@@ -28,7 +28,7 @@ jobs:
       - name: Run fetch_cube_price
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           echo ">>> Starting cube price fetch job..."
           python src/price_tracking/fetch_cube_price.py --log --debug
