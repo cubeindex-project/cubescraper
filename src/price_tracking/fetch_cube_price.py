@@ -99,6 +99,8 @@ def update_vendor_link(
     new_price: Optional[float],
     new_available: Optional[bool],
     reason: str,
+    etag: Optional[str] = None,
+    last_modified: Optional[str] = None,
 ) -> None:
     """
     Persist changes back to cube_vendor_links.
@@ -115,39 +117,61 @@ def update_vendor_link(
         reason,
     )
 
-    supabase.table("cube_vendor_links").update(
-        {
-            "price": new_price,
-            "available": new_available,
-            "updated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-            "last_modified": dt.datetime.now(dt.timezone.utc).isoformat(),
-            "streak_unchanged": 0,
-        }
-    ).eq("id", link["id"]).execute()
+    updates = {
+        "price": new_price,
+        "available": new_available,
+        "updated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "streak_unchanged": 0,
+    }
+    if etag:
+        updates["etag"] = etag
+    if last_modified:
+        updates["last_modified"] = last_modified
+    supabase.table("cube_vendor_links").update(updates).eq("id", link["id"]).execute()
 
 
 def save_snapshot(snapshots: list[dict[str, Any]]):
     supabase.table("cube_vendor_links_snapshot").insert(snapshots).execute()
 
 
-def streak_unchanged(row_id: int, current: Optional[int]):
-    supabase.table("cube_vendor_links").update(
-        {"streak_unchanged": (current or 0) + 1}
-    ).eq("id", row_id).execute()
+def streak_unchanged(
+    row_id: int,
+    current: Optional[int],
+    etag: Optional[str] = None,
+    last_modified: Optional[str] = None,
+):
+    updates = {
+        "streak_unchanged": (current or 0) + 1,
+        "updated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+    }
+    if etag:
+        updates["etag"] = etag
+    if last_modified:
+        updates["last_modified"] = last_modified
+    supabase.table("cube_vendor_links").update(updates).eq("id", row_id).execute()
 
 
 # ---- HTTP fetch -------------------------------------------------------------
 def fetch_page_content(
-    url: str, debug: bool = False
+    url: str,
+    *,
+    etag: Optional[str] = None,
+    last_modified: Optional[str] = None,
+    debug: bool = False,
 ) -> Tuple[int, str, Dict[str, str], str]:
     """
     Fetch a product page with a polite UA and sensible timeout.
+    Adds conditional headers if ETag or Last-Modified values are supplied.
     Returns: (status_code, html, headers, final_url)
     """
     headers = {
         "User-Agent": "CubeIndexBot/1.0 (+support@cubeindex.app)",
         "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
     }
+    if etag:
+        headers["If-None-Match"] = etag
+    if last_modified:
+        headers["If-Modified-Since"] = last_modified
     resp = requests.get(url, headers=headers, timeout=(5, 12), allow_redirects=True)
     if debug:
         logging.debug("   [HTTP] %s -> %s %s", url, resp.status_code, resp.reason)
@@ -545,7 +569,10 @@ if __name__ == "__main__":
             logging.info("1) FETCH   | requesting page...")
             try:
                 status, html, headers, final_url = fetch_page_content(
-                    url, debug=args.debug
+                    url,
+                    etag=link.get("etag"),
+                    last_modified=link.get("last_modified"),
+                    debug=args.debug,
                 )
             except Exception as e:
                 error_count += 1
@@ -564,7 +591,10 @@ if __name__ == "__main__":
                 throttle_for_vendor(url)
                 try:
                     status, html, headers, final_url = fetch_page_content(
-                        url, debug=args.debug
+                        url,
+                        etag=link.get("etag"),
+                        last_modified=link.get("last_modified"),
+                        debug=args.debug,
                     )
                 except Exception as e:
                     error_count += 1
@@ -572,6 +602,21 @@ if __name__ == "__main__":
                     progress.advance(task)
                     continue
                 logging.info("   RETRIED | HTTP=%s final_url=%s", status, final_url)
+
+            if status == 304:
+                logging.info("   NOTMOD | resource not modified; skipping parse")
+                streak_unchanged(
+                    link["id"],
+                    link.get("streak_unchanged"),
+                    headers.get("ETag"),
+                    headers.get("Last-Modified"),
+                )
+                unchanged_count += 1
+                progress.advance(task)
+                continue
+
+            etag_hdr = headers.get("ETag")
+            last_mod_hdr = headers.get("Last-Modified")
 
             if args.save_html:
                 path = ensure_debug_file(html, vendor, cube_slug)
@@ -650,10 +695,22 @@ if __name__ == "__main__":
                             "url": link["url"],
                         }
                     )
-                    update_vendor_link(link, new_price, new_available, reason)
+                    update_vendor_link(
+                        link,
+                        new_price,
+                        new_available,
+                        reason,
+                        etag=etag_hdr,
+                        last_modified=last_mod_hdr,
+                    )
                     changed_count += 1
                 else:
-                    streak_unchanged(link["id"], link.get("streak_unchanged"))
+                    streak_unchanged(
+                        link["id"],
+                        link.get("streak_unchanged"),
+                        etag_hdr,
+                        last_mod_hdr,
+                    )
                     logging.info("5) UPDATE  | no changes detected.")
                     unchanged_count += 1
             except Exception as e:
