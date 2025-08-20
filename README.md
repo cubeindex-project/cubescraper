@@ -5,6 +5,8 @@ product index.  The scripts can download listings from several cube stores,
 normalize the data and push it to a Supabase database.  A separate tool keeps
 vendor prices in sync with the database.
 
+[![Fetch Cube Prices](https://github.com/cubeindex-project/cubescraper/actions/workflows/update_cubes_prices.yml/badge.svg)](https://github.com/cubeindex-project/cubescraper/actions/workflows/update_cubes_prices.yml)
+
 ## Requirements
 
 - Python 3.9 or newer
