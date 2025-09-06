@@ -70,8 +70,17 @@ parser.add_argument(
     action="store_true",
     help="Save fetched HTML to ./.debug/<vendor>/<cube>.html",
 )
+# Require positive integers for --limit
+def positive_int(value: str) -> int:
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError("limit must be > 0")
+    return ivalue
 parser.add_argument(
-    "--limit", type=int, default=0, help="Only process the first N links (0 = all)."
+    "--limit",
+    type=positive_int,
+    default=100,
+    help="Only process the first N links (> 0).",
 )
 parser.add_argument(
     "--force",
@@ -426,7 +435,8 @@ def ensure_debug_file(html: str, vendor: str, cube: str) -> str:
 
 
 def is_supported_vendor(url: str) -> bool:
-    return any(v in url for v in SUPPORTED_VENDORS)
+    host = (urlparse(url).hostname or "").lower()
+    return any(host.endswith(v) for v in SUPPORTED_VENDORS)
 
 
 def vendor_host(url: str) -> str:
