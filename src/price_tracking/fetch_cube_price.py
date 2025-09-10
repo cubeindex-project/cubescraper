@@ -1,4 +1,27 @@
+"""
+Cube price fetcher
+------------------
+
+High-level flow:
+- Load due vendor links from Supabase (or all with --force).
+- For each link, politely fetch the product page with throttling and retries.
+- Prefer parsing JSON-LD Product data; fall back to lightweight HTML heuristics
+  and vendor-specific helpers when available.
+- Decide availability by combining HTTP status with parsed signals.
+- Update the cube_vendor_links row with price, availability, and cache headers.
+- Track a per-link backoff based on an unchanged streak to reduce churn.
+
+Notes:
+- Per-vendor throttling ensures we don't hammer the same host; different vendors
+  can run concurrently.
+- Conditional requests (ETag/Last-Modified) reduce bandwidth and parsing when
+  pages are unchanged (304 Not Modified).
+- Rich console output provides progress + a summary table of changes.
+"""
+
 import sys, os, argparse, json, logging, re, asyncio, time, random
+import unicodedata
+from email.utils import parsedate_to_datetime
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
@@ -29,6 +52,7 @@ from rich.logging import RichHandler
 console = Console()
 
 # ---- Supported vendors (hostname fragments) ----
+# Domains we actively parse/support; unknown hosts are skipped early
 SUPPORTED_VENDORS = [
     "thecubicle.com",
     "gancube.com",
@@ -37,6 +61,7 @@ SUPPORTED_VENDORS = [
 ]
 
 # ---- Throttling & cooldown config -------------------------------------------
+# Minimum time between requests per vendor host (politeness budget)
 VENDOR_MIN_INTERVAL = {
     "thecubicle.com": 5.0,
     "gancube.com": 8.0,
@@ -44,16 +69,19 @@ VENDOR_MIN_INTERVAL = {
     "speedcubes.co.za": 6.0,
 }
 DEFAULT_MIN_INTERVAL = 8.0
+# Add a tiny random jitter so parallel workers don't align perfectly
 JITTER_RANGE = (0.0, 0.4)  # seconds
 
 # Skip rows updated too recently
 LINK_COOLDOWN = timedelta(hours=12)
 
+# Backoff grows as 12h * 2^streak and is capped to avoid going unbounded
 BACKOFF_EXP_CAP = 4  # stop doubling after 2^4 (tweak as you like)
 MAX_LINK_COOLDOWN = timedelta(hours=96)  # clamp at 4 days (tweak as you like)
 WORKER_CONCURRENCY = 10
 
 last_hit_at = defaultdict(lambda: 0.0)
+# One asyncio.Lock per vendor to serialize requests to the same host
 vendor_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
 
@@ -65,17 +93,22 @@ parser = argparse.ArgumentParser(
 # Logging is optional:
 parser.add_argument("--log", action="store_true", help="Enable pretty INFO logs.")
 parser.add_argument("--debug", action="store_true", help="Enable DEBUG logs.")
+# Optionally persist fetched HTML locally for debugging the parsers
 parser.add_argument(
     "--save-html",
     action="store_true",
     help="Save fetched HTML to ./.debug/<vendor>/<cube>.html",
 )
+
+
 # Require positive integers for --limit
 def positive_int(value: str) -> int:
     ivalue = int(value)
     if ivalue <= 0:
         raise argparse.ArgumentTypeError("limit must be > 0")
     return ivalue
+
+
 parser.add_argument(
     "--limit",
     type=positive_int,
@@ -99,11 +132,12 @@ def get_vendor_links(limit: int = 100, force: bool = False) -> list[dict[str, An
     are skipped.  Otherwise only due links are returned.
     """
     if force:
-        res = (
-            supabase.table("cube_vendor_links").select("*").limit(limit).execute()
-        )
+        # Grab a plain list of links (no due/backoff filtering) and
+        # filter to supported vendors only.
+        res = supabase.table("cube_vendor_links").select("*").limit(limit).execute()
         data = res.data or []
         return [l for l in data if is_supported_vendor(l.get("url", ""))]
+    # Default mode: server-side selection of due links with a per-vendor cap
     res = supabase.rpc(
         "due_vendor_links_capped", {"p_limit": limit, "p_per_vendor": 40}
     ).execute()
@@ -137,6 +171,7 @@ def update_vendor_link(
         "price": new_price,
         "available": new_available,
         "updated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        # Reset unchanged streak whenever we record a fresh update
         "streak_unchanged": 0,
     }
     if etag:
@@ -146,12 +181,27 @@ def update_vendor_link(
     supabase.table("cube_vendor_links").update(updates).eq("id", link["id"]).execute()
 
 
+def update_vendor_metadata(
+    row_id: int, *, etag: Optional[str] = None, last_modified: Optional[str] = None
+) -> None:
+    """Update cache headers and timestamp without touching price/availability/streak."""
+    updates: Dict[str, Any] = {
+        "updated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+    }
+    if etag is not None:
+        updates["etag"] = etag
+    if last_modified is not None:
+        updates["last_modified"] = last_modified
+    supabase.table("cube_vendor_links").update(updates).eq("id", row_id).execute()
+
+
 def streak_unchanged(
     row_id: int,
     current: Optional[int],
     etag: Optional[str] = None,
     last_modified: Optional[str] = None,
 ):
+    # Increment unchanged streak when content hasn't changed (or 304)
     updates = {
         "streak_unchanged": (current or 0) + 1,
         "updated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
@@ -164,6 +214,11 @@ def streak_unchanged(
 
 
 # ---- HTTP fetch -------------------------------------------------------------
+def _lower_headers(h: Dict[str, str]) -> Dict[str, str]:
+    """Return a case-insensitive dict by lowercasing header names."""
+    return {str(k).lower(): v for k, v in h.items()}
+
+
 async def fetch_page_content(
     client: httpx.AsyncClient,
     url: str,
@@ -181,6 +236,7 @@ async def fetch_page_content(
         "User-Agent": "CubeIndexBot/1.0 (+support@cubeindex.app)",
         "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
     }
+    # Use conditional headers when available to allow 304 responses
     if etag:
         headers["If-None-Match"] = etag
     if last_modified:
@@ -192,27 +248,33 @@ async def fetch_page_content(
         )
         logging.debug("   [HTTP] Final URL: %s", resp.url)
         logging.debug("   [HTTP] Content-Type: %s", resp.headers.get("Content-Type"))
-    return resp.status_code, resp.text, dict(resp.headers), str(resp.url)
+    # Normalize header keys to lowercase for case-insensitive access
+    return resp.status_code, resp.text, _lower_headers(dict(resp.headers)), str(resp.url)
 
 
 def respect_retry_after(headers: Dict[str, str]) -> float:
     """
     Parse Retry-After header; return seconds to wait (fallback 60s if bad date).
     """
-    ra = headers.get("Retry-After")
+    ra = headers.get("retry-after")
     if not ra:
         return 0.0
     try:
         return float(ra)
     except ValueError:
-        # HTTP-date; just use a conservative default
-        return 60.0
+        # HTTP-date; try to parse and compute delta, else fallback
+        try:
+            dt_val = parsedate_to_datetime(ra)
+            if not dt_val.tzinfo:
+                dt_val = dt_val.replace(tzinfo=timezone.utc)
+            delta = (dt_val - datetime.now(timezone.utc)).total_seconds()
+            return max(0.0, float(delta))
+        except Exception:
+            return 60.0
 
 
 # ---- JSON-LD extraction -----------------------------------------------------
-def extract_json_ld_block(
-    html: str, debug: bool = False
-) -> Optional[Dict[str, Any]]:
+def extract_json_ld_block(html: str, debug: bool = False) -> Optional[Dict[str, Any]]:
     """
     Return the first JSON-LD Product node (handles arrays & @graph) or None.
     """
@@ -350,34 +412,57 @@ def extract_from_html(
     Fallback: heuristics from raw HTML text and buttons.
     """
     # Prefer a vendor-specific parser first
+    # Try dedicated vendor parser first (more reliable than heuristics)
     vs = _parse_vendor_specific(url, html)
     if vs:
         return vs
 
     soup = BeautifulSoup(html, "lxml")
     text = soup.get_text(" ", strip=True).lower()
+    text_ascii = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii").lower()
 
     available = None
     reason = "unknown"
 
-    if any(w in text for w in OOS_WORDS):
+    if any((w in text) or (w in text_ascii) for w in OOS_WORDS):
         available = False
         reason = "keyword:oos"
-    elif any(w in text for w in PREORDER_WORDS):
+    elif any((w in text) or (w in text_ascii) for w in PREORDER_WORDS):
         available = True
         reason = "keyword:preorder"
-    elif any(w in text for w in INSTOCK_WORDS):
+    elif any((w in text) or (w in text_ascii) for w in INSTOCK_WORDS):
         available = True
         reason = "keyword:instock"
-    elif soup.select_one(
-        'button:contains("Add to cart"),button:contains("Ajouter au panier")'
-    ):
-        available = True
-        reason = "button:add-to-cart"
+    else:
+        # Look for common buy/add-to-cart cues in button-like elements
+        for el in soup.find_all(["button", "a", "input"]):
+            t = (el.get_text(" ", strip=True) or el.get("value") or "").strip()
+            if not t:
+                continue
+            t_low = t.lower()
+            t_ascii = unicodedata.normalize("NFKD", t_low).encode("ascii", "ignore").decode("ascii")
+            if any(
+                phrase in t_low or phrase in t_ascii
+                for phrase in (
+                    "add to cart",
+                    "add to basket",
+                    "add to bag",
+                    "buy now",
+                    "ajouter au panier",
+                    "acheter",
+                )
+            ):
+                available = True
+                reason = "button:add-to-cart"
+                break
 
     price = None
     match_text = None
-    m = PRICE_RE.search(text)
+    price_re = re.compile(
+        r"(?:[$€£¥R]|usd|eur|gbp|zar)?\s*(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:[$€£¥R]|usd|eur|gbp|zar)?",
+        re.I,
+    )
+    m = price_re.search(text)
     if m:
         match_text = m.group(0)
         try:
@@ -398,6 +483,11 @@ def extract_from_html(
         )
 
     return price, available, {"html": True, "reason": reason, "price_match": match_text}
+
+
+# Override corrupted keyword constants (ensure robust matching)
+OOS_WORDS = ("out of stock", "sold out", "rupture", "épuisé", "epuise")
+PREORDER_WORDS = ("preorder", "précommande", "precommande")
 
 
 # ---- Helpers ----------------------------------------------------------------
@@ -426,6 +516,7 @@ def decide_available(
 def ensure_debug_file(html: str, vendor: str, cube: str) -> str:
     """
     Save raw HTML for manual inspection when --save-html is set.
+    Files are organized as .debug/<vendor>/<cube>.html
     """
     base = Path(".debug") / vendor
     base.mkdir(parents=True, exist_ok=True)
@@ -585,13 +676,16 @@ async def process_link(
         logging.info("   FETCHED | HTTP=%s final_url=%s", status, final_url)
 
         if status == 304:
-            logging.info("   NOTMOD | resource not modified; skipping parse")
+            logging.info("   NOTMOD | resource not modified; updating row anyway")
+            # Treat as an update to refresh updated_at, cache headers and reset streak
             await asyncio.to_thread(
-                streak_unchanged,
-                link["id"],
-                link.get("streak_unchanged"),
-                headers.get("ETag"),
-                headers.get("Last-Modified"),
+                update_vendor_link,
+                link,
+                link.get("price"),
+                link.get("available"),
+                "not-modified",
+                headers.get("etag"),
+                headers.get("last-modified"),
             )
             unchanged_count = 1
             return (
@@ -604,6 +698,7 @@ async def process_link(
 
         # Handle back-pressure (429 / 503) once
         if status in (429, 503):
+            # Respect Retry-After when present; otherwise use a conservative wait
             wait_for = max(respect_retry_after(headers), 30.0)
             logging.warning("   BACKOFF | status=%s waiting %.1fs", status, wait_for)
             await asyncio.sleep(wait_for)
@@ -629,13 +724,16 @@ async def process_link(
             logging.info("   RETRIED | HTTP=%s final_url=%s", status, final_url)
 
             if status == 304:
-                logging.info("   NOTMOD | resource not modified; skipping parse")
+                logging.info("   NOTMOD | resource not modified; updating row anyway")
+                # Treat as an update to refresh updated_at, cache headers and reset streak
                 await asyncio.to_thread(
-                    streak_unchanged,
-                    link["id"],
-                    link.get("streak_unchanged"),
-                    headers.get("ETag"),
-                    headers.get("Last-Modified"),
+                    update_vendor_link,
+                    link,
+                    link.get("price"),
+                    link.get("available"),
+                    "not-modified",
+                    headers.get("etag"),
+                    headers.get("last-modified"),
                 )
                 unchanged_count = 1
                 return (
@@ -646,8 +744,8 @@ async def process_link(
                     error_count,
                 )
 
-        etag_hdr = headers.get("ETag")
-        last_mod_hdr = headers.get("Last-Modified")
+        etag_hdr = headers.get("etag")
+        last_mod_hdr = headers.get("last-modified")
 
         if args.save_html:
             path = await asyncio.to_thread(ensure_debug_file, html, vendor, cube_slug)
@@ -720,14 +818,17 @@ async def process_link(
                 )
                 changed_count = 1
             else:
+                # Update row even when values are unchanged (refresh updated_at and reset streak)
                 await asyncio.to_thread(
-                    streak_unchanged,
-                    link["id"],
-                    link.get("streak_unchanged"),
+                    update_vendor_link,
+                    link,
+                    new_price,
+                    new_available,
+                    "unchanged",
                     etag_hdr,
                     last_mod_hdr,
                 )
-                logging.info("5) UPDATE  | no changes detected.")
+                logging.info("5) UPDATE  | values unchanged; row refreshed.")
                 unchanged_count = 1
         except Exception as e:
             error_count = 1
@@ -772,9 +873,7 @@ if __name__ == "__main__":
     console.rule("[bold cyan]CubeIndex Price Tracker")
     console.print("Loading vendor links from database...")
 
-    links = get_vendor_links(
-        args.limit if args.limit > 0 else 100, force=args.force
-    )
+    links = get_vendor_links(args.limit if args.limit > 0 else 100, force=args.force)
 
     if not links:
         console.print("[red]No vendor links found.[/]")
@@ -783,9 +882,7 @@ if __name__ == "__main__":
     total = len(links)
     console.print(f"[green]Found {total} link(s). Starting run...[/]")
 
-    async def runner() -> (
-        list[tuple[list[dict[str, Any]], int, int, int, int]]
-    ):
+    async def runner() -> list[tuple[list[dict[str, Any]], int, int, int, int]]:
         async with httpx.AsyncClient() as client:
             with Progress(
                 TextColumn("[bold]{task.description}"),
