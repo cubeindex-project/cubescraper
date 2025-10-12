@@ -34,12 +34,13 @@ from bs4 import BeautifulSoup
 
 # allow "src.common.supabaseClient" import
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from src.common.supabaseClient import supabase  # noqa: E402
+from src.common.supabaseClient import supabase
 
 # ---- Pretty console (always-on progress) ------------------------------------
 from rich.console import Console
 from rich.progress import (
     Progress,
+    TaskID,
     TextColumn,
     BarColumn,
     TaskProgressColumn,
@@ -604,7 +605,7 @@ async def process_link(
     link: dict[str, Any],
     client: httpx.AsyncClient,
     progress: Progress,
-    task_id: int,
+    task_id: TaskID,
     args: argparse.Namespace,
 ) -> tuple[list[dict[str, Any]], int, int, int, int]:
     """Process a single vendor link and return its outcome.
