@@ -1,6 +1,7 @@
 import sys, os, re, requests
 from typing import TypedDict, Optional, Literal
 from urllib.parse import urlparse
+from rapidfuzz import fuzz
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from src.common.supabaseClient import supabase
@@ -135,5 +136,51 @@ if __name__ == "__main__":
             continue
 
         print(f"Link {i}/{len(jobLinks)} processed!")
-    
+
     print("All links processed!")
+    print("Verifying data consistency across links...")
+
+    SIMILARITY_THRESHOLD = 50  # percent
+    verif_score = 0
+    pairs_checked = 0
+
+    for prev, curr in zip(store_cube_details, store_cube_details[1:]):
+        name_a, name_b = prev.get("name", ""), curr.get("name", "")
+        brand_a, brand_b = prev.get("brand", ""), curr.get("brand", "")
+        type_a, type_b = prev.get("type", ""), curr.get("type", "")
+
+        if not name_a or not name_b:
+            print("Missing name in one of the entries, skipping...")
+            continue
+
+        if not brand_a or not brand_b:
+            print("Missing name in one of the entries, skipping...")
+            continue
+
+        if not type_a or not type_b:
+            print("Missing name in one of the entries, skipping...")
+            continue
+
+        name_match_percent = fuzz.token_sort_ratio(name_a.lower(), name_b.lower())
+        brand_match_percent = fuzz.token_sort_ratio(brand_a.lower(), brand_b.lower())
+        type_match_percent = fuzz.token_sort_ratio(type_a.lower(), type_b.lower())
+
+        pairs_checked += 1
+        if (
+            name_match_percent >= SIMILARITY_THRESHOLD
+            and brand_match_percent >= SIMILARITY_THRESHOLD
+            and type_match_percent >= SIMILARITY_THRESHOLD
+        ):
+            verif_score += 1
+
+    if pairs_checked == 0:
+        print("No valid name pairs to compare.")
+        sys.exit(1)
+
+    if verif_score != pairs_checked:
+        print(
+            f"Only {verif_score}/{pairs_checked} pairs matched (threshold {SIMILARITY_THRESHOLD}%)."
+        )
+        sys.exit(1)
+
+    print("All links match the same cube!")
