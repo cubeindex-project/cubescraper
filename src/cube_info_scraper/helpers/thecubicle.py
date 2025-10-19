@@ -1,16 +1,64 @@
+import re, sys, os
 from bs4 import BeautifulSoup
 
-html = open(
-    "C:/Users/ilans/Documents/GitHub/cubescraper/.debug/TheCubicle/dayan-guhong-pro-m-54mm-maglev.html",
-    "r",
-    encoding="utf-8",
-).read()
+
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+)
+from src.cube_info_scraper.fetch_cube_info import Specs
 
 
-def the_cubicle_cube_details(html) -> dict[str, str]:
+def _extract_number(value: str) -> float | None:
+    match = re.search(r"(\d+(?:\.\d+)?)", value)
+    if not match:
+        return None
+    return float(match.group(1))
+
+
+def thecubicle_cube_details(html: str) -> Specs:
     soup = BeautifulSoup(html, "html.parser")
+    specs: Specs = {
+        "name": None,
+        "brand": None,
+        "image_url": None,
+        "type": None,
+        "discontinued": None,
+        "release_date": None,
+        "weight": None,
+        "version_type": None,
+        "surface_finish": None,
+        "size": None,
+        "magnetic": None,
+        "maglev": None,
+        "smart": None,
+        "stickered": None,
+        "wca_legal": None,
+        "modded": None,
+        "ball_core": None,
+    }
+
+    nameLbl = soup.find("h1", {"itemprop": "name"})
+    name = nameLbl.get_text(strip=True) if nameLbl else None
+    specs["name"] = name
+
+    if name is not None:
+        nameLow = name.lower()
+
+        if "maglev" in nameLow:
+            specs["maglev"] = True
+        elif "smart" in nameLow:
+            specs["smart"] = True
+        elif "ball core" in nameLow:
+            specs["ball_core"] = True
+
+    meta = soup.find("meta", {"itemprop": "image"})
+    if meta:
+        content = meta.get("content", None)  # type: ignore
+        if content:
+            specs["image_url"] = "https:" + str(content)
+
     table = soup.select_one("table.w-full.border-collapse.border.border-gray-200")
-    specs = {}
+
     for tr in table.select("tr") if table else []:
         th = tr.find("th")
         td = tr.find("td")
@@ -18,30 +66,45 @@ def the_cubicle_cube_details(html) -> dict[str, str]:
             continue
 
         label = th.get_text(strip=True)
-        val = td.get_text(separator=" ", strip=True)
+        value = td.get_text(separator=" ", strip=True)
+        key = label.lower()
 
-        match label.lower():
-            case "manufacturer":
-                label = "Brand"
-            case "type":
-                pass
-            case "added":
-                label = "Released"
-            case "magnets":
-                label = "Magnetic"
-                if val == "Magnetic":
-                    val = True
-                else:
-                    val = False
-            case "item weight":
-                label = "Weight"
-                val = val.replace("g", "").strip()
-            case _:
-                continue
+        if key in {"manufacturer", "brand"}:
+            specs["brand"] = value
 
-        specs[label] = val
+        elif key in {"type"}:
+            specs["type"] = value
+
+        elif key in {"added"}:
+            specs["release_date"] = value
+
+        elif key in {"magnets"}:
+            specs["magnetic"] = value.lower() == "magnetic"
+
+        elif key in {"dimensions"}:
+            specs["size"] = value
+
+        elif key in {"gross weight"}:
+            numeric_value = _extract_number(value)
+            if numeric_value is not None:
+                specs["weight"] = numeric_value
+
+        elif key in {"item weight"}:
+            numeric_value = _extract_number(value)
+            if numeric_value is not None:
+                specs["weight"] = numeric_value
+
+        else:
+            continue
 
     return specs
 
 
-print(the_cubicle_cube_details(html))
+if __name__ == "__main__":
+    html = open(
+        "C:/Users/ilans/Documents/GitHub/cubescraper/.debug/TheCubicle/dayan-guhong-pro-m-54mm-maglev.html",
+        "r",
+        encoding="utf-8",
+    ).read()
+
+    print(thecubicle_cube_details(html))
