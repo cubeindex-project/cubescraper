@@ -6,11 +6,23 @@ import sys
 import unicodedata
 
 import requests
-from datetime import date
-from typing import Callable, Literal, Optional, TypedDict, Tuple, List, Dict, Any
+from datetime import date, datetime
+from typing import (
+    Callable,
+    Literal,
+    Optional,
+    TypedDict,
+    Tuple,
+    List,
+    Dict,
+    Any,
+    Iterable,
+)
+from collections import Counter, defaultdict
 from urllib.parse import urlparse
 from rapidfuzz import fuzz
 from slugify import slugify
+from difflib import get_close_matches
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from src.common.supabaseClient import supabase
@@ -19,19 +31,91 @@ parser = argparse.ArgumentParser(
     "fetch_cube_info",
     description="Fetch job links and cube details from them to insert into the database.",
 )
+
+
+# Require positive integers for --limit
+def positive_int(value: str) -> int:
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError("limit must be > 0")
+    return ivalue
+
+
 parser.add_argument("--debug", action="store_true", help="Enable DEBUG logs.")
+parser.add_argument(
+    "--limit",
+    type=positive_int,
+    default=100,
+    help="Only process the first N jobs (> 0).",
+)
+parser.add_argument(
+    "--force",
+    action="store_true",
+    help="Process jobs regardless of status.",
+)
 
 args = parser.parse_args()
 debug: bool = args.debug
+limit: int = args.limit
 
-logging.basicConfig(
-    level=logging.DEBUG if debug else logging.INFO,
-    format="%(levelname)s %(message)s",
-)
-logger = logging.getLogger("cube_info_scraper.fetch_cube_info")
 
-if debug:
-    logger.debug("Debug logging enabled.")
+class ConsoleFormatter(logging.Formatter):
+    """Console-friendly formatter with optional ANSI colors and aligned columns."""
+
+    RESET = "\033[0m"
+    LEVEL_STYLES = {
+        logging.DEBUG: ("DEBUG", "\033[36m"),
+        logging.INFO: ("INFO", "\033[32m"),
+        logging.WARNING: ("WARNING", "\033[33m"),
+        logging.ERROR: ("ERROR", "\033[31m"),
+        logging.CRITICAL: ("CRITICAL", "\033[41m"),
+    }
+
+    def __init__(self, use_color: bool) -> None:
+        super().__init__(fmt="%(levelname)s | %(message)s")
+        self.use_color = use_color
+
+    def format(self, record: logging.LogRecord) -> str:
+        original_levelname = record.levelname
+        record.short_name = record.name.rsplit(".", 1)[-1]
+
+        label, color = self.LEVEL_STYLES.get(record.levelno, (record.levelname, ""))
+        padded_label = label.ljust(8)
+
+        if self.use_color and color:
+            record.levelname = f"{color}{padded_label}{self.RESET}"
+        else:
+            record.levelname = padded_label
+
+        try:
+            return super().format(record)
+        finally:
+            record.levelname = original_levelname
+
+
+def configure_logger(debug_mode: bool) -> logging.Logger:
+    """Create a console logger with cleaner formatting."""
+    level = logging.DEBUG if debug_mode else logging.INFO
+    parent_logger = logging.getLogger("cube_info_scraper")
+    parent_logger.setLevel(level)
+    parent_logger.handlers.clear()
+    parent_logger.propagate = False
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(level)
+    stream = console_handler.stream
+    use_color = hasattr(stream, "isatty") and stream.isatty()
+    console_handler.setFormatter(ConsoleFormatter(use_color=use_color))
+    parent_logger.addHandler(console_handler)
+
+    child_logger = parent_logger.getChild("fetch_cube_info")
+
+    if debug_mode:
+        child_logger.debug("Debug logging enabled.")
+    return child_logger
+
+
+logger = configure_logger(debug)
 
 CubeVersionType = Literal["Base", "Trim", "Limited"]
 CubeSurfaceFinish = Optional[Literal["Frosted", "UV Coated", "Glossy", "Sculpted"]]
@@ -68,6 +152,7 @@ class Specs(TypedDict):
     wca_legal: Optional[bool]
     modded: Optional[bool]
     ball_core: Optional[bool]
+    source: str
 
 
 class CubeDBSchema(TypedDict):
@@ -126,23 +211,24 @@ def format_dimensions(text: str) -> str:
     return normalized
 
 
-def fetch_jobs() -> List[Dict[str, Any]]:
-    logger.info("Fetching next job...")
+def fetch_jobs(limit: int = 100) -> List[Dict[str, Any]]:
+    logger.info("Fetching next jobs...")
 
     try:
-        jobs = (
-            supabase.table("cube_scrap_runs")
-            .select("id, user_id")
-            .order("created_at")
-            .eq("status", "queued")
-            .execute()
+        query = (
+            supabase.table("cube_scrap_runs").select("id, user_id").order("created_at")
         )
+
+        if not args.force:
+            query = query.eq("status", "queued")
+
+        jobs = query.limit(limit).execute()
     except Exception:
-        logger.exception("Error fetching next job from Supabase.")
+        logger.exception("Error fetching next jobs from Supabase.")
         raise
 
     if not jobs:
-        logger.error("No jobs found!")
+        logger.info("No jobs found!")
         sys.exit(1)
 
     return jobs.data
@@ -167,7 +253,7 @@ def fetch_job_links(job_id: str) -> list[str]:
 
     if not job_links:
         logger.error("No job links found for job_id=%s!", job_id)
-        raise
+        sys.exit(1)
 
     logger.info("%d links fetched.", len(job_links))
     logger.debug("Processing job links...")
@@ -259,14 +345,225 @@ def verify_cube_details(store_cube_details: list[Specs]) -> None:
             pairs_checked,
             SIMILARITY_THRESHOLD,
         )
-        raise
+        sys.exit(1)
 
     logger.info("All links match the same cube.")
 
 
-def merge_cube_details(store_cube_details: list[Specs]) -> Specs:
-    logger.info("Merging store cube details...")
+Resolver = Callable[[list[Any]], Any]
 
+
+def _first_non_none(values: Iterable[Any]) -> Any:
+    for v in values:
+        if v is not None and v != "":
+            return v
+    return None
+
+
+def _most_common(values: Iterable[Any]) -> Any:
+    vals = [v for v in values if v is not None and v != ""]
+    return Counter(vals).most_common(1)[0][0] if vals else None
+
+
+def _to_date(v: Any) -> Optional[date]:
+    if isinstance(v, datetime):
+        return v.date()
+    if isinstance(v, date):
+        return v
+    if isinstance(v, str) and v.strip():
+        for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y"):
+            try:
+                return datetime.strptime(v, fmt).date()
+            except ValueError:
+                pass
+    return None
+
+
+def _resolve_release_date(values: List[Any]) -> Optional[str]:
+    dates = [_to_date(v) for v in values]
+    dates = [d for d in dates if d is not None]
+    return min(dates).isoformat() if dates else None
+
+
+def _resolve_image(values: list[Any]) -> Optional[str]:
+    # first non-empty URL wins; fall back to last non-empty if you prefer
+    return _first_non_none(values)
+
+VALID_TYPES = {
+    "Square-1",
+    "3x3x3",
+    "2x2x2",
+    "4x4x4",
+    "5x5x5",
+    "6x6x6",
+    "7x7x7",
+    "8x8x8",
+    "9x9x9",
+    "10x10x10",
+    "Megaminx",
+    "Gigaminx",
+    "Kilominx",
+    "Master Kilominx",
+    "Teraminx",
+    "Petaminx",
+    "Pyraminx",
+    "Skewb",
+    "Mirror",
+    "Gear Cube",
+    "Shape Mod",
+    "Clock",
+    "1x3x3",
+    "1x1x2",
+    "Other",
+}
+
+ALLOWED_TYPES = [
+    "Square-1","3x3x3","2x2x2","4x4x4","5x5x5","6x6x6","7x7x7","8x8x8","9x9x9","10x10x10",
+    "Megaminx","Pyraminx","Gigaminx","Kilominx","Master Kilominx","Teraminx","Petaminx",
+    "Skewb","Mirror","Gear Cube","Shape Mod","Clock","1x3x3","1x1x2","Other",
+]
+_CANON_LC = {c.lower(): c for c in ALLOWED_TYPES}
+
+ALIASES = {
+    "sq1":"Square-1","square1":"Square-1","square one":"Square-1",
+    "3x3":"3x3x3","2x2":"2x2x2","4x4":"4x4x4","5x5":"5x5x5","6x6":"6x6x6","7x7":"7x7x7",
+    "8x8":"8x8x8","9x9":"9x9x9","10x10":"10x10x10",
+    "mirror cube":"Mirror","gear":"Gear Cube","clock cube":"Clock",
+    "megaminx cube":"Megaminx","pyraminx cube":"Pyraminx","skewb cube":"Skewb",
+}
+
+# 3x3, 3x3x3, 3×3×3, "3 x 3", with optional "cube"
+_NXN = re.compile(r"^\s*(\d{1,2})\s*[x×*]\s*\1(?:\s*[x×*]\s*\1)?\s*(?:cube)?\s*$", re.I)
+
+def canonicalize_type(raw: Optional[str], cutoff: float = 0.74) -> str:
+    if not raw or not str(raw).strip():
+        return "Other"
+    s = re.sub(r"\s+", " ", str(raw).strip().lower())
+
+    # NxNxN normalize → "NxNxN"
+    m = _NXN.match(s)
+    if m:
+        n = m.group(1)
+        nxn = f"{n}x{n}x{n}"
+        if nxn in _CANON_LC:  # e.g., 3x3→3x3x3
+            return _CANON_LC[nxn]
+
+    # alias or exact canonical
+    if s in ALIASES:
+        return ALIASES[s]
+    if s in _CANON_LC:
+        return _CANON_LC[s]
+
+    # fuzzy over known terms (canonical + aliases)
+    corpus = list(_CANON_LC.keys()) + list(ALIASES.keys())
+    match = get_close_matches(s, corpus, n=1, cutoff=cutoff)
+    if match:
+        k = match[0]
+        return _CANON_LC.get(k, ALIASES.get(k, "Other"))
+
+    return "Other"
+
+def _resolve_type(values: Iterable[Optional[str]], cutoff: float = 0.74) -> str:
+    canon = [canonicalize_type(v, cutoff) for v in values if v and str(v).strip()]
+    if not canon:
+        return "Other"
+    top = Counter(canon).most_common(1)[0][0]
+    return top
+    
+
+
+def _resolve_bool(values: List[Any]) -> Optional[bool]:
+    seen_true = False
+    seen_false = False
+    for v in values:
+        if v == True:
+            seen_true = True
+        elif v == False:
+            seen_false = True
+
+    if seen_true:
+        return True
+    if seen_false:
+        return False
+    return None
+
+
+def _resolve_numeric(values: list[Any]) -> Optional[float]:
+    nums: list[float] = []
+    for v in values:
+        if v is None or v == "":
+            continue
+        try:
+            nums.append(float(v))
+        except (TypeError, ValueError):
+            pass
+    # Pick most common numeric, or first, or median—your choice:
+    return _most_common(nums) if nums else None
+
+
+def _resolve_string(values: list[Any]) -> Optional[str]:
+    vals = [str(v) for v in values if v not in (None, "")]
+    if not vals:
+        return None
+    counts = Counter(vals).most_common()
+    top_count = counts[0][1]
+    candidates = [v for v, c in counts if c == top_count]
+    return candidates[0]  # first most-common
+
+
+RULES: dict[str, Resolver] = {
+    "release_date": _resolve_release_date,
+    "image_url": _resolve_image,
+    # booleans
+    "magnetic": _resolve_bool,
+    "maglev": _resolve_bool,
+    "smart": _resolve_bool,
+    "stickered": _resolve_bool,
+    "wca_legal": _resolve_bool,
+    "modded": _resolve_bool,
+    "ball_core": _resolve_bool,
+    # numerics
+    "weight": _resolve_numeric,
+    "size": _resolve_numeric,
+    # strings (explicit if you want, else default below handles)
+    # "name": _resolve_string,
+    # "brand": _resolve_string,
+    "type": lambda vals: _resolve_type(vals, cutoff=0.74),
+    # "version_type": _resolve_string,
+    # "surface_finish": _resolve_string,
+    # "discontinued": _resolve_bool,  # if this is actually boolean
+}
+
+
+ALL_KEYS = [
+    "name",
+    "brand",
+    "image_url",
+    "type",
+    "discontinued",
+    "release_date",
+    "weight",
+    "version_type",
+    "surface_finish",
+    "size",
+    "magnetic",
+    "maglev",
+    "smart",
+    "stickered",
+    "wca_legal",
+    "modded",
+    "ball_core",
+]
+
+
+def merge_cube_details(rows: list[Specs]) -> Specs:
+    # 1) collect all candidate values per key (preserve input order for tie-breakers)
+    bucket: dict[str, list[Any]] = defaultdict(list)
+    for row in rows:
+        for k in ALL_KEYS:
+            bucket[k].append(row.get(k))
+
+    # 2) resolve each key with the appropriate rule
     merged: Specs = {
         "name": None,
         "brand": None,
@@ -285,198 +582,270 @@ def merge_cube_details(store_cube_details: list[Specs]) -> Specs:
         "wca_legal": None,
         "modded": None,
         "ball_core": None,
+        "source": "",
     }
 
-    for row in store_cube_details:
-        for key, value in row.items():
-            old_value = merged.get(key)
+    for k in ALL_KEYS:
+        values = bucket.get(k, [])
+        resolver = RULES.get(k)
+        if resolver is None:
+            # default: prefer most common non-empty string; else first non-none for other types
+            # You can specialize further if needed.
+            merged[k] = (
+                _resolve_string(values)
+                if any(isinstance(v, str) for v in values if v is not None)
+                else _first_non_none(values)
+            )
+        else:
+            merged[k] = resolver(values)
 
-            if key == "release_date":
-                if not old_value or value < old_value:
-                    merged[key] = str(value) if value else None
-            elif key == "image_url" and old_value is None:
-                merged[key] = str(value)
-            elif key in (
-                "magnetic",
-                "maglev",
-                "smart",
-                "stickered",
-                "wca_legal",
-                "modded",
-                "ball_core",
-            ):
-                merged[key] = False if value is None else bool(value)
-            else:
-                merged[key] = value
-
-    logger.info("Successfully merged store cube details.")
     return merged
 
 
-def parse_series_and_model(raw_name: str, raw_brand: str) -> tuple[str, str, str]:
-    parsed_model_tokens: list[str] = []
-    parsed_version_name = ""
+def parse_series_and_model(raw_name: str, raw_brand: str) -> Tuple[str, str, str]:
+    """
+    Returns (series, model, version_name)
+    """
+    if not raw_name:
+        return (raw_brand or "", "", "")
 
-    if raw_name:
-        normalized_name = unicodedata.normalize("NFKC", raw_name)
-        normalized_name = re.sub(r"\s+", " ", normalized_name).strip()
+    # inline helpers (kept inside to satisfy "one function")
+    COLOR_WORDS = {
+        "black",
+        "white",
+        "blue",
+        "green",
+        "purple",
+        "lilac",
+        "gold",
+        "golden",
+        "silver",
+        "emeraldox",
+        "newblack",
+        "new black",
+        "matte",
+    }
+    VERSION_PHRASES = {
+        # editions / events
+        "special edition",
+        "spirit pearl",
+        "10th anniversary edition",
+        "lunar new year edition",
+        "brainstorm voyage edition",
+        # features / materials / extras
+        "uv",
+        "uv coated",
+        "enhanced",
+        "pioneer",
+        "flagship",
+        "max",
+        "fx",
+        "ferrocore",
+        "robot stand",
+        "magnetic core",
+        "core magnets",
+        "ball-core",
+        "20 magnet ball-core",
+        "8-magnet-ball-core",
+        "20-magnet-ball-core",
+        "green internals",
+    }
+    MODEL_FEATURE_TOKENS = {
+        "m",
+        "maglev",
+        "lite",
+        "pro",
+        "leap",
+        "air",
+        "duo",
+        "carry",
+        "carry e",
+        "carry 2",
+        "s",
+        "me",
+        "me v2",
+        "ai",
+    }
+    UV_TIGHT_IN_MODEL = True
 
-        size_pattern = re.compile(r"^\d+\s*x\s*\d+(?:\s*x\s*\d+)?$", re.IGNORECASE)
-        version_token_pattern = re.compile(r"^v?\d{1,2}[a-z]?$", re.IGNORECASE)
-        numeric_variant_pattern = re.compile(r"^\d{2}$")
-        ignore_tokens = {
-            "stickerless",
-            "stickered",
-            "stickers",
-            "speed",
-            "cube",
-            "cubes",
-            "smart",
-            "puzzle",
-            "with",
-            "edition",
-            "bundle",
-            "set",
-            "standard",
-            "coated",
-            "m",
-        }
-        model_start_keywords = {
-            "maglev",
-            "magnetic",
-            "pioneer",
-            "ball-core",
-            "ballcore",
-            "core",
-            "core-magnets",
-            "double-track",
-            "double",
-            "track",
-            "max",
-            "plus",
-            "pro",
-            "elite",
-            "flagship",
-            "enhanced",
-            "super",
-            "primary",
-            "halo",
-            "tornado",
-            "wrm",
-            "rs3m",
-            "rs3",
-            "shadow",
-            "nebula",
-            "spark",
-            "lite",
-            "light",
-        }
-        drop_from_model = {"magnetic"}
+    SIZE_NxN = re.compile(r"^\d+\s*[x×]\s*\d+(?:\s*[x×]\s*\d+)?$", re.IGNORECASE)
+    SIZE_MM = re.compile(r"^\d+\s*mm$", re.IGNORECASE)
+    VER_TOKEN = re.compile(r"^v?\d{1,2}[a-z]?$", re.IGNORECASE)
+    NUM2 = re.compile(r"^\d{2}$")
+    UV_WORD = re.compile(r"\buv\b", re.IGNORECASE)
 
-        base_without_parens = re.sub(r"\([^)]*\)", "", normalized_name)
-        base_tokens = [
-            token.strip(" ,-/")
-            for token in base_without_parens.split()
-            if token.strip(" ,-/")
-        ]
+    def _norm(text: str) -> str:
+        t = unicodedata.normalize("NFKC", text or "")
+        return re.sub(r"\s+", " ", t).strip()
 
-        if re.search(r"\buv\b", normalized_name, re.IGNORECASE):
-            parsed_version_name = "UV"
+    def _split_clean(s: str) -> List[str]:
+        return [tok.strip(" ,-/") for tok in s.split() if tok.strip(" ,-/")]
 
-        series_tokens: list[str] = []
-        start_model = False
+    def _is_color(tok: str) -> bool:
+        return tok.lower() in COLOR_WORDS
 
-        for token in base_tokens:
-            cleaned = token.strip(" ,-/")
-            if not cleaned:
+    def _is_version_phrase(s: str) -> bool:
+        low = s.lower()
+        if low in VERSION_PHRASES:
+            return True
+        if "special edition" in low or "anniversary" in low:
+            return True
+        if "ball-core" in low or "magnetic core" in low or "core magnets" in low:
+            return True
+        if UV_WORD.search(low) or "uv coated" in low:
+            return True
+        if low.endswith("edition"):
+            return True
+        return False
+
+    def _token_starts_model(tok: str) -> bool:
+        low = tok.lower()
+        if VER_TOKEN.match(tok) or NUM2.match(tok):
+            return True
+        parts = re.split(r"[-/ ]", low)
+        return any(
+            p
+            in {
+                "wr",
+                "wrm",
+                "v",
+                "v2",
+                "v3",
+                "v4",
+                "v5",
+                "v6",
+                "v7",
+                "v8",
+                "v9",
+                "v10",
+                "v11",
+            }
+            for p in parts
+        )
+
+    name = _norm(raw_name)
+    brand_tokens = _split_clean(raw_brand or "")
+
+    # base (without parens) and tokens
+    base = re.sub(r"\([^)]*\)", "", name)
+    base_tokens = _split_clean(base)
+
+    series_tokens: List[str] = []
+    model_tokens: List[str] = []
+    version_tags: List[str] = []
+
+    start_model = False
+    saw_any_modelish = False
+
+    i = 0
+    while i < len(base_tokens):
+        tok = base_tokens[i]
+        low = tok.lower()
+
+        # sizes
+        if SIZE_NxN.match(low):
+            # keep NxN if it's the actual variant or we already flipped to model
+            if start_model or not saw_any_modelish:
+                model_tokens.append(tok)
+                saw_any_modelish = True
+            i += 1
+            continue
+        if SIZE_MM.match(low):
+            model_tokens.append(tok)
+            saw_any_modelish = True
+            i += 1
+            continue
+
+        # UV token (route later)
+        if UV_WORD.search(low) or low in {"uv-coated", "uvcoated"}:
+            i += 1
+            continue
+
+        # decide boundary
+        token_starts_model = _token_starts_model(tok) or (low in MODEL_FEATURE_TOKENS)
+        if not start_model:
+            if token_starts_model and series_tokens:
+                start_model = True
+                saw_any_modelish = True
+            else:
+                series_tokens.append(tok)
+                i += 1
                 continue
 
-            ascii_token = cleaned.lower().replace("A-", "x")
-            if size_pattern.match(ascii_token):
+        # in model section
+        if _is_version_phrase(tok) or _is_color(tok):
+            version_tags.append(tok)
+        else:
+            model_tokens.append(tok)
+        saw_any_modelish = True
+        i += 1
+
+    # Brand + leading number/alpha → attach to last series token with a space
+    if brand_tokens and series_tokens:
+        bt = [t.lower() for t in brand_tokens]
+        st = [t.lower() for t in series_tokens[: len(brand_tokens)]]
+        if bt == st and model_tokens:
+            m0 = model_tokens[0]
+            if (m0.isdigit() and 1 <= len(m0) <= 2) or re.match(
+                r"^\d{1,2}[a-z]+$", m0, re.I
+            ):
+                series_tokens[-1] = f"{series_tokens[-1]} {m0}"
+                model_tokens = model_tokens[1:]
+
+    # Scan parentheticals and route
+    for segment in re.findall(r"\(([^()]*)\)", name):
+        for piece in re.split(r"[,/]", segment):
+            cand = piece.strip(" -/")
+            if not cand:
                 continue
-
-            lower = cleaned.lower()
-            if "uv" in lower:
-                parsed_version_name = "UV"
+            low = cand.lower()
+            if SIZE_NxN.match(low) or SIZE_MM.match(low):
+                model_tokens.append(cand)
                 continue
-
-            if lower in ignore_tokens:
-                if not start_model and lower in model_start_keywords and series_tokens:
-                    start_model = True
+            if _is_version_phrase(cand) or _is_color(cand):
+                version_tags.append(cand)
                 continue
+            if low in MODEL_FEATURE_TOKENS:
+                model_tokens.append(cand)
+            else:
+                version_tags.append(cand)
 
-            token_starts_model = False
-            if version_token_pattern.match(cleaned):
-                token_starts_model = True
-            elif numeric_variant_pattern.match(cleaned):
-                token_starts_model = True
-            elif any(part in model_start_keywords for part in lower.split("-")):
-                token_starts_model = True
-
-            if not start_model:
-                if token_starts_model and series_tokens:
-                    start_model = True
-                else:
-                    series_tokens.append(cleaned)
-                    continue
-
-            if lower in drop_from_model or lower in ignore_tokens:
-                continue
-
-            parsed_model_tokens.append(cleaned)
-
-        brand_tokens = raw_brand.split() if raw_brand else []
-
-        if (
-            brand_tokens
-            and series_tokens
-            and [tok.lower() for tok in series_tokens[: len(brand_tokens)]]
-            == [tok.lower() for tok in brand_tokens]
-            and parsed_model_tokens
+    # UV routing: keep as version tag unless it's tightly "M UV" in model
+    model_str = " ".join(model_tokens).strip()
+    if UV_WORD.search(name) or any("uv coated" in t.lower() for t in version_tags):
+        if not (
+            UV_TIGHT_IN_MODEL and re.search(r"\bM\s+UV\b", model_str, re.IGNORECASE)
         ):
-            first_model_token = parsed_model_tokens[0]
-            if first_model_token.isdigit() and len(first_model_token) <= 2:
-                series_tokens[-1] = f"{series_tokens[-1]}{first_model_token}"
-                parsed_model_tokens = parsed_model_tokens[1:]
+            # keep canonical "UV" once
+            version_tags = [t for t in version_tags if "uv coated" not in t.lower()]
+            if not any(UV_WORD.search(t) for t in version_tags):
+                version_tags.append("UV")
 
-        parenthetical_tokens: list[str] = []
-        for segment in re.findall(r"\(([^()]*)\)", normalized_name):
-            for piece in re.split(r"[,/]", segment):
-                candidate = piece.strip(" -/")
-                if not candidate:
-                    continue
-                ascii_candidate = candidate.lower().replace("A-", "x")
-                if size_pattern.match(ascii_candidate):
-                    continue
-                candidate_lower = candidate.lower()
-                if "uv" in candidate_lower:
-                    parsed_version_name = "UV"
-                    continue
-                if (
-                    candidate_lower in ignore_tokens
-                    or candidate_lower in drop_from_model
-                ):
-                    continue
-                parenthetical_tokens.append(candidate)
+    # format/dedupe version tags
+    def _fmt_tag(t: str) -> str:
+        t = t.strip()
+        if t.upper() in {"UV", "FX", "MAX"}:
+            return t.upper()
+        if any(
+            ch.isupper() for ch in t[1:]
+        ):  # preserve existing style like "Ball-Core"
+            return t
+        return t.title()
 
-        seen_model_tokens = {token.lower(): token for token in parsed_model_tokens}
-        for token in parenthetical_tokens:
-            lowered = token.lower()
-            if lowered not in seen_model_tokens:
-                parsed_model_tokens.append(token)
-                seen_model_tokens[lowered] = token
+    seen = set()
+    deduped = []
+    for t in version_tags:
+        key = t.lower().strip()
+        if key not in seen:
+            seen.add(key)
+            deduped.append(_fmt_tag(t))
 
-        parsed_series = " ".join(series_tokens).strip()
-        if not parsed_series:
-            parsed_series = raw_brand or ""
-    else:
-        parsed_series = raw_brand or ""
+    version_name = " + ".join(deduped)
 
-    parsed_model = " ".join(parsed_model_tokens).strip()
-    if not parsed_model and raw_name:
-        parsed_model = raw_name
+    parsed_series = " ".join(series_tokens).strip() or (raw_brand or "")
+    parsed_model = model_str or (raw_name or "")
 
-    return parsed_series, parsed_model, parsed_version_name
+    return parsed_series, parsed_model, version_name
 
 
 def prepare_insert_payload(
@@ -486,7 +855,7 @@ def prepare_insert_payload(
 
     if submitted_by_id is None:
         logger.error("Missing user_id for job; aborting insert preparation.")
-        raise
+        sys.exit(1)
 
     insert_payload: CubeDBSchema = {
         "brand": "",
@@ -531,7 +900,7 @@ def prepare_insert_payload(
             continue
         merged_value = merged.get(key)
 
-        if key == "size":
+        if key == "size" and merged_value is not None:
             insert_payload[key] = format_dimensions(str(merged_value))
 
         elif key in {
@@ -590,6 +959,7 @@ def set_job_as_running(job_id: int):
 
     logger.info("Job successfully set as running.")
 
+
 def set_job_as_done(job_id: int):
     logger.info("Setting job as done...")
     try:
@@ -627,7 +997,7 @@ def set_job_as_failed(job_id: int, error: str):
 
 
 def main() -> None:
-    jobs = fetch_jobs()
+    jobs = fetch_jobs(limit)
     for job in jobs:
         job_id = job["id"]
         user_id_value = job.get("user_id")
@@ -638,6 +1008,7 @@ def main() -> None:
         )
 
         try:
+            set_job_as_running(job_id)
             job_links = fetch_job_links(job_id)
             store_cube_details = fetch_store_cube_details(job_links)
             verify_cube_details(store_cube_details)
