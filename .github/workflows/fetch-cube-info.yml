@@ -1,0 +1,35 @@
+name: Fetch cube info for pending jobs
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install depedencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run fetch_cube_info
+        env:
+          SUPABASE_URL: ${{secrets.SUPABASE_URL}}
+          SUPABASE_SERVICE_KEY: ${{secrets.SUPABASE_SERVICE_KEY}}
+        run: |
+          echo ">>> Starting fetch cube info python script"
+          python src/cube_info_scraper/fetch_cube_info.py
+          echo ">>> Script successful"
