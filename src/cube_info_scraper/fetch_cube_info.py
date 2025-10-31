@@ -26,6 +26,7 @@ from difflib import get_close_matches
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from src.common.supabaseClient import supabase
+from src.price_tracking.fetch_cube_price import process_link
 
 parser = argparse.ArgumentParser(
     "fetch_cube_info",
@@ -178,8 +179,28 @@ class CubeFeaturesDBSchema(TypedDict):
     cube: str
     feature: str
 
+class VendorLinkCandidate(TypedDict):
+    vendor_name: str
+    url: str
+    price: Optional[float]
+    available: Optional[bool]
+
+
+class VendorLinkInsertPayload(TypedDict, total=False):
+    vendor_name: str
+    url: str
+    cube_slug: str
+    price: float
+    available: bool
+
 
 SUPPORTED_STORES = {"thecubicle.com", "speedcubeshop.com"}
+VENDOR_DOMAIN_TO_NAME = {
+    "thecubicle.com": "TheCubicle",
+    "speedcubeshop.com": "SpeedCubeShop",
+    "gancube.com": "GANCUBE",
+    "speedcubes.co.za": "Speedcubes.co.za",
+}
 REQUEST_TIMEOUT_SECONDS = 12.0
 SIMILARITY_THRESHOLD = 0
 USER_AGENT_HEADERS = {
@@ -389,6 +410,7 @@ def _resolve_image(values: list[Any]) -> Optional[str]:
     # first non-empty URL wins; fall back to last non-empty if you prefer
     return _first_non_none(values)
 
+
 VALID_TYPES = {
     "Square-1",
     "3x3x3",
@@ -418,22 +440,58 @@ VALID_TYPES = {
 }
 
 ALLOWED_TYPES = [
-    "Square-1","3x3x3","2x2x2","4x4x4","5x5x5","6x6x6","7x7x7","8x8x8","9x9x9","10x10x10",
-    "Megaminx","Pyraminx","Gigaminx","Kilominx","Master Kilominx","Teraminx","Petaminx",
-    "Skewb","Mirror","Gear Cube","Shape Mod","Clock","1x3x3","1x1x2","Other",
+    "Square-1",
+    "3x3x3",
+    "2x2x2",
+    "4x4x4",
+    "5x5x5",
+    "6x6x6",
+    "7x7x7",
+    "8x8x8",
+    "9x9x9",
+    "10x10x10",
+    "Megaminx",
+    "Pyraminx",
+    "Gigaminx",
+    "Kilominx",
+    "Master Kilominx",
+    "Teraminx",
+    "Petaminx",
+    "Skewb",
+    "Mirror",
+    "Gear Cube",
+    "Shape Mod",
+    "Clock",
+    "1x3x3",
+    "1x1x2",
+    "Other",
 ]
 _CANON_LC = {c.lower(): c for c in ALLOWED_TYPES}
 
 ALIASES = {
-    "sq1":"Square-1","square1":"Square-1","square one":"Square-1",
-    "3x3":"3x3x3","2x2":"2x2x2","4x4":"4x4x4","5x5":"5x5x5","6x6":"6x6x6","7x7":"7x7x7",
-    "8x8":"8x8x8","9x9":"9x9x9","10x10":"10x10x10",
-    "mirror cube":"Mirror","gear":"Gear Cube","clock cube":"Clock",
-    "megaminx cube":"Megaminx","pyraminx cube":"Pyraminx","skewb cube":"Skewb",
+    "sq1": "Square-1",
+    "square1": "Square-1",
+    "square one": "Square-1",
+    "3x3": "3x3x3",
+    "2x2": "2x2x2",
+    "4x4": "4x4x4",
+    "5x5": "5x5x5",
+    "6x6": "6x6x6",
+    "7x7": "7x7x7",
+    "8x8": "8x8x8",
+    "9x9": "9x9x9",
+    "10x10": "10x10x10",
+    "mirror cube": "Mirror",
+    "gear": "Gear Cube",
+    "clock cube": "Clock",
+    "megaminx cube": "Megaminx",
+    "pyraminx cube": "Pyraminx",
+    "skewb cube": "Skewb",
 }
 
 # 3x3, 3x3x3, 3×3×3, "3 x 3", with optional "cube"
 _NXN = re.compile(r"^\s*(\d{1,2})\s*[x×*]\s*\1(?:\s*[x×*]\s*\1)?\s*(?:cube)?\s*$", re.I)
+
 
 def canonicalize_type(raw: Optional[str], cutoff: float = 0.74) -> str:
     if not raw or not str(raw).strip():
@@ -463,13 +521,13 @@ def canonicalize_type(raw: Optional[str], cutoff: float = 0.74) -> str:
 
     return "Other"
 
+
 def _resolve_type(values: Iterable[Optional[str]], cutoff: float = 0.74) -> str:
     canon = [canonicalize_type(v, cutoff) for v in values if v and str(v).strip()]
     if not canon:
         return "Other"
     top = Counter(canon).most_common(1)[0][0]
     return top
-    
 
 
 def _resolve_bool(values: List[Any]) -> Optional[bool]:
@@ -600,6 +658,54 @@ def merge_cube_details(rows: list[Specs]) -> Specs:
             merged[k] = resolver(values)
 
     return merged
+
+
+def _resolve_vendor_name(url: str) -> Optional[str]:
+    hostname = (urlparse(url).hostname or "").lower()
+    for domain, vendor_name in VENDOR_DOMAIN_TO_NAME.items():
+        if hostname.endswith(domain):
+            return vendor_name
+    return None
+
+
+def prepare_vendor_links(job_links: list[str]) -> List[VendorLinkCandidate]:
+    vendor_links: List[VendorLinkCandidate] = []
+    for link in job_links:
+        vendor_name = _resolve_vendor_name(link)
+        if not vendor_name:
+            logger.debug("Skipping vendor link for unsupported host: %s", link)
+            continue
+
+        try:
+            result = process_link(link, force=True)
+        except Exception as exc:  # pragma: no cover - network errors depend on env
+            logger.warning(
+                "Failed to fetch vendor details for %s (%s). Falling back to placeholders.",
+                link,
+                exc,
+            )
+            vendor_links.append(
+                {
+                    "vendor_name": vendor_name,
+                    "url": link,
+                    "price": None,
+                    "available": None,
+                }
+            )
+            continue
+
+        price = result.price if result.outcome != "error" else None
+        available = result.available if result.outcome != "error" else None
+        vendor_links.append(
+            {
+                "vendor_name": vendor_name,
+                "url": link,
+                "price": price,
+                "available": available,
+            }
+        )
+
+    return vendor_links
 
 
 def parse_series_and_model(raw_name: str, raw_brand: str) -> Tuple[str, str, str]:
@@ -849,8 +955,12 @@ def parse_series_and_model(raw_name: str, raw_brand: str) -> Tuple[str, str, str
 
 
 def prepare_insert_payload(
-    merged: Specs, submitted_by_id: Optional[str]
-) -> Tuple[CubeDBSchema, List[CubeFeaturesDBSchema]]:
+    merged: Specs,
+    submitted_by_id: Optional[str],
+    vendor_links: List[VendorLinkCandidate],
+) -> Tuple[
+    CubeDBSchema, List[CubeFeaturesDBSchema], List[VendorLinkInsertPayload]
+]:
     logger.info("Preparing data for insert into the database...")
 
     if submitted_by_id is None:
@@ -920,13 +1030,33 @@ def prepare_insert_payload(
         elif merged_value is not None:
             insert_payload[key] = merged_value
 
-    logger.info("Prepared %d feature rows for insert", len(features_payload))
+    # Vendor Links
 
-    return insert_payload, features_payload
+    vendor_links_payload: List[VendorLinkInsertPayload] = []
+    slug = insert_payload.get("slug", "")
+    if not slug:
+        logger.warning("Unable to prepare vendor links payload without a cube slug.")
+        return insert_payload, features_payload, vendor_links_payload
+
+    for vendor_link in vendor_links:
+        payload: VendorLinkInsertPayload = {
+            "vendor_name": vendor_link["vendor_name"],
+            "url": vendor_link["url"],
+            "cube_slug": slug,
+        }
+        if vendor_link["price"] is not None:
+            payload["price"] = float(vendor_link["price"])
+        if vendor_link["available"] is not None:
+            payload["available"] = bool(vendor_link["available"])
+        vendor_links_payload.append(payload)
+
+    return insert_payload, features_payload, vendor_links_payload
 
 
 def insert_to_database(
-    insert_payload: CubeDBSchema, features_payload: List[CubeFeaturesDBSchema]
+    insert_payload: CubeDBSchema,
+    features_payload: List[CubeFeaturesDBSchema],
+    vendor_links: List[VendorLinkInsertPayload],
 ):
     logger.info("Inserting data into the database...")
     try:
@@ -935,6 +1065,10 @@ def insert_to_database(
             supabase.table("cubes_model_features").insert(features_payload).execute()
         else:
             logger.info("No features to insert.")
+        if vendor_links:
+            supabase.table("cube_vendor_links").insert(vendor_links).execute()
+        else:
+            logger.info("No vendor links to insert.")
     except Exception:
         if debug:
             logger.exception("Error inserting data into the database.")
@@ -1012,11 +1146,12 @@ def main() -> None:
             job_links = fetch_job_links(job_id)
             store_cube_details = fetch_store_cube_details(job_links)
             verify_cube_details(store_cube_details)
+            vendor_links = prepare_vendor_links(job_links)
             merged_details = merge_cube_details(store_cube_details)
-            insert_payload, features_payload = prepare_insert_payload(
-                merged_details, submitted_by_id
+            insert_payload, features_payload, vendor_links_payload = prepare_insert_payload(
+                merged_details, submitted_by_id, vendor_links
             )
-            insert_to_database(insert_payload, features_payload)
+            insert_to_database(insert_payload, features_payload, vendor_links_payload)
             set_job_as_done(job_id)
         except BaseException as e:
             set_job_as_failed(job_id, str(e))

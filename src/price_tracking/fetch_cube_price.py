@@ -19,921 +19,690 @@ Notes:
 - Rich console output provides progress + a summary table of changes.
 """
 
-import sys, os, argparse, json, logging, re, asyncio, time, random
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import re
+import sys
 import unicodedata
-from email.utils import parsedate_to_datetime
-from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
-import datetime as dt
-from datetime import datetime, timezone, timedelta
+from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, Tuple
 from urllib.parse import urlparse
 
 import httpx
 from bs4 import BeautifulSoup
 
-# allow "src.common.supabaseClient" import
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+# Allow "src.common.supabaseClient" import regardless of entrypoint.
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+
 from src.common.supabaseClient import supabase
 
-# ---- Pretty console (always-on progress) ------------------------------------
-from rich.console import Console
-from rich.progress import (
-    Progress,
-    TaskID,
-    TextColumn,
-    BarColumn,
-    TaskProgressColumn,
-    TimeElapsedColumn,
-    TimeRemainingColumn,
-)
-from rich.table import Table
-from rich.logging import RichHandler
 
-console = Console()
+# -----------------------------------------------------------------------------
+# Configuration
+# -----------------------------------------------------------------------------
 
-# ---- Supported vendors (hostname fragments) ----
-# Domains we actively parse/support; unknown hosts are skipped early
-SUPPORTED_VENDORS = [
+SUPPORTED_VENDORS = (
     "thecubicle.com",
     "gancube.com",
     "speedcubeshop.com",
     "speedcubes.co.za",
-]
+)
 
-# ---- Throttling & cooldown config -------------------------------------------
-# Minimum time between requests per vendor host (politeness budget)
-VENDOR_MIN_INTERVAL = {
-    "thecubicle.com": 5.0,
-    "gancube.com": 8.0,
-    "speedcubeshop.com": 6.0,
-    "speedcubes.co.za": 6.0,
+VENDOR_PARSERS: Dict[str, str] = {
+    "thecubicle.com": "src.price_tracking.helpers.thecubicle:parse_cubicle",
+    "gancube.com": "src.price_tracking.helpers.gancube:parse_gancube",
+    "speedcubeshop.com": "src.price_tracking.helpers.scs:parse_scs",
+    "speedcubes.co.za": "src.price_tracking.helpers.speedcubes_co_za:parse_speedcubes_co_za",
 }
-DEFAULT_MIN_INTERVAL = 8.0
-# Add a tiny random jitter so parallel workers don't align perfectly
-JITTER_RANGE = (0.0, 0.4)  # seconds
 
-# Skip rows updated too recently
-LINK_COOLDOWN = timedelta(hours=12)
+REQUEST_TIMEOUT = 15.0
+COOLDOWN = timedelta(hours=12)
 
-# Backoff grows as 12h * 2^streak and is capped to avoid going unbounded
-BACKOFF_EXP_CAP = 4  # stop doubling after 2^4 (tweak as you like)
-MAX_LINK_COOLDOWN = timedelta(hours=96)  # clamp at 4 days (tweak as you like)
-WORKER_CONCURRENCY = 10
+DEFAULT_HEADERS = {
+    "User-Agent": "CubeIndexBot/1.0 (+support@cubeindex.app)",
+    "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
+}
 
-last_hit_at = defaultdict(lambda: 0.0)
-# One asyncio.Lock per vendor to serialize requests to the same host
-vendor_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
-
-
-# ---- CLI --------------------------------------------------------------------
-parser = argparse.ArgumentParser(
-    "fetch_cube_price",
-    description="Fetch price & availability for known vendor links and update DB.",
+PRICE_RE = re.compile(
+    r"(?:[$\u20ac\u00a3]|usd|eur|gbp|zar)?\s*(\d{1,5}(?:[.,]\d{1,2})?)",
+    re.IGNORECASE,
 )
-# Logging is optional:
-parser.add_argument("--log", action="store_true", help="Enable pretty INFO logs.")
-parser.add_argument("--debug", action="store_true", help="Enable DEBUG logs.")
-# Optionally persist fetched HTML locally for debugging the parsers
-parser.add_argument(
-    "--save-html",
-    action="store_true",
-    help="Save fetched HTML to ./.debug/<vendor>/<cube>.html",
-)
+OOS_KEYWORDS = ("out of stock", "sold out", "rupture", "epuise")
+INSTOCK_KEYWORDS = ("in stock", "ready to ship", "en stock", "disponible")
+PREORDER_KEYWORDS = ("preorder", "pre-order", "precommande")
 
 
-# Require positive integers for --limit
-def positive_int(value: str) -> int:
-    ivalue = int(value)
-    if ivalue <= 0:
-        raise argparse.ArgumentTypeError("limit must be > 0")
-    return ivalue
+# -----------------------------------------------------------------------------
+# Dataclasses
+# -----------------------------------------------------------------------------
+
+@dataclass(slots=True)
+class ProcessOptions:
+    """Runtime flags that influence how a link is processed."""
+    force: bool = False
+    save_html: bool = False
 
 
-parser.add_argument(
-    "--limit",
-    type=positive_int,
-    default=100,
-    help="Only process the first N links (> 0).",
-)
-parser.add_argument(
-    "--force",
-    action="store_true",
-    help="Force check all links, ignoring cooldown/backoff (unsupported skipped)",
-)
+@dataclass(slots=True)
+class ParsedSignals:
+    """Intermediate container for parsed price and availability signals."""
+    price: Optional[float]
+    available: Optional[bool]
 
 
-# ---- DB access --------------------------------------------------------------
-def get_vendor_links(limit: int = 100, force: bool = False) -> list[dict[str, Any]]:
-    """
-    Pull vendor links from the database.
+@dataclass(slots=True)
+class ProcessLinkUpdate:
+    """Captured changes that should be flushed back to the database."""
+    row_id: int
+    price: Optional[float]
+    available: Optional[bool]
+    etag: Optional[str]
+    last_modified: Optional[str]
+    streak: int
 
-    When ``force`` is True all known links up to ``limit`` are returned
-    (ignoring the usual due/backoff filtering) while unsupported vendors
-    are skipped.  Otherwise only due links are returned.
-    """
-    if force:
-        # Grab a plain list of links (no due/backoff filtering) and
-        # filter to supported vendors only.
-        res = supabase.table("cube_vendor_links").select("*").limit(limit).execute()
-        data = res.data or []
-        return [l for l in data if is_supported_vendor(l.get("url", ""))]
-    # Default mode: server-side selection of due links with a per-vendor cap
-    res = supabase.rpc(
+
+@dataclass(slots=True)
+class ProcessLinkResult:
+    """Return value from ``process_link`` describing outcome and pending update."""
+    outcome: Literal["changed", "unchanged", "skipped", "error"]
+    price: Optional[float]
+    available: Optional[bool]
+    status_code: Optional[int] = None
+    update: Optional[ProcessLinkUpdate] = None
+
+
+# -----------------------------------------------------------------------------
+# CLI parsing
+# -----------------------------------------------------------------------------
+
+def parse_args() -> argparse.Namespace:
+    """Build and return the CLI argument parser for the module entrypoint."""
+    parser = argparse.ArgumentParser(
+        "fetch_cube_price",
+        description="Fetch price & availability for known vendor links and update DB.",
+    )
+    parser.add_argument("--limit", type=int, default=100, help="Process at most N links.")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Ignore the cooldown window and reprocess all supported links.",
+    )
+    parser.add_argument(
+        "--save-html",
+        action="store_true",
+        help="Persist fetched HTML under ./.debug/<vendor>/<cube>.html",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Verbose log output (DEBUG level).",
+    )
+    return parser.parse_args()
+
+
+# -----------------------------------------------------------------------------
+# Database helpers
+# -----------------------------------------------------------------------------
+
+def fetch_all_links(limit: int) -> List[Dict[str, Any]]:
+    """Return the first ``limit`` vendor link rows regardless of cooldown/backoff."""
+    resp = supabase.table("cube_vendor_links").select("*").limit(limit).execute()
+    return resp.data or []
+
+
+def fetch_due_links(limit: int) -> List[Dict[str, Any]]:
+    """Return vendor links flagged as due via the ``due_vendor_links_capped`` RPC."""
+    resp = supabase.rpc(
         "due_vendor_links_capped", {"p_limit": limit, "p_per_vendor": 40}
     ).execute()
-    return res.data or []
+    return resp.data or []
 
 
-def update_vendor_link(
-    link: Dict[str, Any],
-    new_price: Optional[float],
-    new_available: Optional[bool],
-    reason: str,
-    etag: Optional[str] = None,
-    last_modified: Optional[str] = None,
-) -> None:
-    """
-    Persist changes back to cube_vendor_links.
-    We set updated_at here (UTC) so you don't depend on DB triggers.
-    """
-    old_price, old_av = link["price"], link["available"]
-    logging.info(
-        "5) UPDATE  | %-20s price: %s -> %s  available: %s -> %s  reason=%s",
-        link["vendor_name"],
-        old_price,
-        new_price,
-        old_av,
-        new_available,
-        reason,
-    )
-
-    updates = {
-        "price": new_price,
-        "available": new_available,
-        "updated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-        # Reset unchanged streak whenever we record a fresh update
-        "streak_unchanged": 0,
-    }
-    if etag:
-        updates["etag"] = etag
-    if last_modified:
-        updates["last_modified"] = last_modified
-    supabase.table("cube_vendor_links").update(updates).eq("id", link["id"]).execute()
+def filter_supported_links(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Filter out any link whose host is not recognised in ``SUPPORTED_VENDORS``."""
+    return [row for row in rows if is_supported_vendor(row.get("url", ""))]
 
 
-def update_vendor_metadata(
-    row_id: int, *, etag: Optional[str] = None, last_modified: Optional[str] = None
-) -> None:
-    """Update cache headers and timestamp without touching price/availability/streak."""
-    updates: Dict[str, Any] = {
-        "updated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-    }
-    if etag is not None:
-        updates["etag"] = etag
-    if last_modified is not None:
-        updates["last_modified"] = last_modified
-    supabase.table("cube_vendor_links").update(updates).eq("id", row_id).execute()
+def load_vendor_links(limit: int, force: bool) -> List[Dict[str, Any]]:
+    """Load raw link rows from Supabase honouring ``force`` and supported host filter."""
+    rows = fetch_all_links(limit) if force else fetch_due_links(limit)
+    return filter_supported_links(rows)
 
 
-def streak_unchanged(
-    row_id: int,
-    current: Optional[int],
-    etag: Optional[str] = None,
-    last_modified: Optional[str] = None,
-):
-    # Increment unchanged streak when content hasn't changed (or 304)
-    updates = {
-        "streak_unchanged": (current or 0) + 1,
-        "updated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-    }
-    if etag:
-        updates["etag"] = etag
-    if last_modified:
-        updates["last_modified"] = last_modified
-    supabase.table("cube_vendor_links").update(updates).eq("id", row_id).execute()
+def recently_updated(link: Dict[str, Any]) -> bool:
+    """True when the link was refreshed within the configured cooldown window."""
+    updated_at = link.get("updated_at")
+    if not updated_at:
+        return False
+    try:
+        ts = datetime.fromisoformat(str(updated_at).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return datetime.now(timezone.utc) - ts < COOLDOWN
 
 
-# ---- HTTP fetch -------------------------------------------------------------
-def _lower_headers(h: Dict[str, str]) -> Dict[str, str]:
-    """Return a case-insensitive dict by lowercasing header names."""
-    return {str(k).lower(): v for k, v in h.items()}
+# -----------------------------------------------------------------------------
+# Networking helpers
+# -----------------------------------------------------------------------------
+
+def vendor_host(url: str) -> str:
+    """Extract and lowercase the hostname portion of a vendor URL."""
+    return (urlparse(url).hostname or "").lower()
 
 
-async def fetch_page_content(
-    client: httpx.AsyncClient,
-    url: str,
-    *,
-    etag: Optional[str] = None,
-    last_modified: Optional[str] = None,
-    debug: bool = False,
-) -> Tuple[int, str, Dict[str, str], str]:
-    """Fetch a product page with a polite UA and sensible timeout.
+def is_supported_vendor(url: str) -> bool:
+    """Check whether the URL belongs to one of the known vendor domains."""
+    host = vendor_host(url)
+    return any(host.endswith(domain) for domain in SUPPORTED_VENDORS)
 
-    Adds conditional headers if ETag or Last-Modified values are supplied.
-    Returns a tuple of ``(status_code, html, headers, final_url)``.
-    """
-    headers = {
-        "User-Agent": "CubeIndexBot/1.0 (+support@cubeindex.app)",
-        "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
-    }
-    # Use conditional headers when available to allow 304 responses
+
+def resolve_vendor_parser(url: str) -> Optional[Callable[[str], Any]]:
+    """Dynamically import a vendor-specific parser based on the URL host."""
+    host = vendor_host(url)
+    for domain, dotted in VENDOR_PARSERS.items():
+        if host.endswith(domain):
+            module_name, func_name = dotted.split(":")
+            module = __import__(module_name, fromlist=[func_name])
+            return getattr(module, func_name)
+    return None
+
+
+def build_request_headers(etag: Optional[str], last_modified: Optional[str]) -> Dict[str, str]:
+    """Prepare conditional request headers using cached ETag/Last-Modified values."""
+    headers = dict(DEFAULT_HEADERS)
     if etag:
         headers["If-None-Match"] = etag
     if last_modified:
         headers["If-Modified-Since"] = last_modified
-    resp = await client.get(url, headers=headers, timeout=12.0, follow_redirects=True)
-    if debug:
-        logging.debug(
-            "   [HTTP] %s -> %s %s", url, resp.status_code, resp.reason_phrase
-        )
-        logging.debug("   [HTTP] Final URL: %s", resp.url)
-        logging.debug("   [HTTP] Content-Type: %s", resp.headers.get("Content-Type"))
-    # Normalize header keys to lowercase for case-insensitive access
-    return resp.status_code, resp.text, _lower_headers(dict(resp.headers)), str(resp.url)
+    return headers
 
 
-def respect_retry_after(headers: Dict[str, str]) -> float:
-    """
-    Parse Retry-After header; return seconds to wait (fallback 60s if bad date).
-    """
-    ra = headers.get("retry-after")
-    if not ra:
-        return 0.0
-    try:
-        return float(ra)
-    except ValueError:
-        # HTTP-date; try to parse and compute delta, else fallback
-        try:
-            dt_val = parsedate_to_datetime(ra)
-            if not dt_val.tzinfo:
-                dt_val = dt_val.replace(tzinfo=timezone.utc)
-            delta = (dt_val - datetime.now(timezone.utc)).total_seconds()
-            return max(0.0, float(delta))
-        except Exception:
-            return 60.0
+def fetch_product_response(
+    client: httpx.Client,
+    url: str,
+    *,
+    etag: Optional[str],
+    last_modified: Optional[str],
+) -> httpx.Response:
+    """Execute a GET request for the product URL with polite headers and timeout."""
+    headers = build_request_headers(etag, last_modified)
+    return client.get(url, headers=headers)
 
 
-# ---- JSON-LD extraction -----------------------------------------------------
-def extract_json_ld_block(html: str, debug: bool = False) -> Optional[Dict[str, Any]]:
-    """
-    Return the first JSON-LD Product node (handles arrays & @graph) or None.
-    """
+def extract_cache_headers(response: httpx.Response) -> Tuple[Optional[str], Optional[str]]:
+    """Pull out ETag and Last-Modified headers from a response for persistence."""
+    return response.headers.get("etag"), response.headers.get("last-modified")
+
+
+# -----------------------------------------------------------------------------
+# Parsing helpers
+# -----------------------------------------------------------------------------
+
+def iter_jsonld_nodes(payload: Any) -> Iterable[Any]:
+    """Yield each element inside JSON-LD structures, normalising lists/@graph."""
+    if isinstance(payload, list):
+        for item in payload:
+            yield from iter_jsonld_nodes(item)
+    elif isinstance(payload, dict) and isinstance(payload.get("@graph"), list):
+        for item in payload["@graph"]:
+            yield from iter_jsonld_nodes(item)
+    else:
+        yield payload
+
+
+def extract_json_ld(html: str) -> Optional[Dict[str, Any]]:
+    """Return the first JSON-LD product node found within the page or None."""
     soup = BeautifulSoup(html, "lxml")
-    blocks: list[Any] = []
     for tag in soup.find_all("script", type="application/ld+json"):
+        text = tag.string or tag.get_text()
+        if not text:
+            continue
         try:
-            text = tag.string or tag.get_text()
-            if not text:
-                continue
-            blocks.append(json.loads(text))
-        except Exception as e:
-            if debug:
-                logging.debug("   [JSON-LD] Failed to parse block: %r", e)
-    if debug:
-        logging.debug("   [JSON-LD] Found %d block(s).", len(blocks))
-
-    def is_product(node: Dict[str, Any]) -> bool:
-        t = node.get("@type")
-        if isinstance(t, list):
-            return any(str(x).lower() == "product" for x in t)
-        return str(t).lower() == "product"
-
-    # Flatten arrays and @graph forms
-    candidates: list[Dict[str, Any]] = []
-    for b in blocks:
-        if isinstance(b, list):
-            candidates.extend(b)  # type: ignore[index]
-        elif isinstance(b, dict) and isinstance(b.get("@graph"), list):
-            candidates.extend(b["@graph"])
-        elif isinstance(b, dict):
-            candidates.append(b)
-
-    for node in candidates:
-        if isinstance(node, dict) and is_product(node):
-            if debug:
-                logging.debug("   [JSON-LD] Using Product node.")
-            return node
-
-    if debug:
-        logging.debug("   [JSON-LD] No Product node found.")
+            data = json.loads(text)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        for node in iter_jsonld_nodes(data):
+            if isinstance(node, dict):
+                type_field = node.get("@type")
+                types = type_field if isinstance(type_field, list) else [type_field]
+                if any(str(t).lower() == "product" for t in types if t):
+                    return node
     return None
 
 
-def extract_from_json_ld(
-    product_node: Dict[str, Any], debug: bool = False
-) -> Tuple[Optional[float], Optional[bool], Dict[str, Any]]:
-    """
-    Parse price & availability from a JSON-LD Product node.
-    """
-    offers = product_node.get("offers")
+def parse_jsonld_signals(html: str) -> ParsedSignals:
+    """Parse price and availability from JSON-LD Product data, when present."""
+    node = extract_json_ld(html)
+    if not node:
+        return ParsedSignals(None, None)
+
+    offers = node.get("offers")
     if isinstance(offers, list):
         offers = offers[0] if offers else None
+    if not isinstance(offers, dict):
+        return ParsedSignals(None, None)
 
-    price = None
-    available = None
+    price_raw = offers.get("price")
+    if price_raw is None and isinstance(offers.get("priceSpecification"), dict):
+        price_raw = offers["priceSpecification"].get("price")
 
-    if offers:
-        price_raw = offers.get("price") or (offers.get("priceSpecification") or {}).get(
-            "price"
-        )
-        availability_raw = str(offers.get("availability", "")).lower()
+    price: Optional[float] = None
+    if price_raw is not None:
+        try:
+            price = float(str(price_raw).replace(",", "."))
+        except ValueError:
+            price = None
 
-        if price_raw is not None:
-            try:
-                price = float(str(price_raw).replace(",", "."))
-            except Exception as e:
-                if debug:
-                    logging.debug(
-                        "   [JSON-LD] Price parse error: %r (raw=%r)", e, price_raw
-                    )
+    availability = None
+    availability_raw = str(offers.get("availability", "")).lower()
+    if "instock" in availability_raw or "in_stock" in availability_raw:
+        availability = True
+    elif "outofstock" in availability_raw or "soldout" in availability_raw:
+        availability = False
+    elif "preorder" in availability_raw:
+        availability = True
 
-        if "instock" in availability_raw:
-            available = True
-        elif "outofstock" in availability_raw or "soldout" in availability_raw:
-            available = False
-        elif "preorder" in availability_raw:
-            available = True
-
-        if debug:
-            logging.debug(
-                "   [JSON-LD] Extracted price=%s available=%s (raw=%s)",
-                price,
-                available,
-                availability_raw,
-            )
-
-    return price, available, {"jsonld": product_node}
+    return ParsedSignals(price, availability)
 
 
-# ---- HTML fallback ----------------------------------------------------------
-PRICE_RE = re.compile(
-    r"(?:\$|€|£)?\s?(\d{1,5}(?:[.,]\d{2})?)\s?(?:€|eur|usd|gbp|£|\$)?", re.I
-)
-OOS_WORDS = ("out of stock", "sold out", "rupture", "épuisé")
-INSTOCK_WORDS = ("in stock", "disponible", "ready to ship", "en stock")
-PREORDER_WORDS = ("preorder", "précommande")
-
-
-def _parse_vendor_specific(
-    url: str, html: str
-) -> Optional[Tuple[Optional[float], Optional[bool], Dict[str, Any]]]:
-    """
-    Call vendor-specific helpers when hostname matches.
-    """
-    host = urlparse(url).hostname or ""
+def parse_vendor_signals(url: str, html: str) -> ParsedSignals:
+    """Delegate to vendor-specific helpers for richer parsing when available."""
+    parser = resolve_vendor_parser(url)
+    if not parser:
+        return ParsedSignals(None, None)
     try:
-        if host.endswith("thecubicle.com"):
-            from src.price_tracking.helpers.thecubicle import parse_cubicle
+        result = parser(html)
+    except Exception as exc:  # pragma: no cover - vendor helpers may fail unexpectedly
+        logging.debug("Vendor parser failure for %s: %s", vendor_host(url), exc)
+        return ParsedSignals(None, None)
+    if isinstance(result, tuple) and len(result) >= 2:
+        return ParsedSignals(result[0], result[1])
+    return ParsedSignals(None, None)
 
-            return parse_cubicle(html)
-        if host.endswith("gancube.com"):
-            from src.price_tracking.helpers.gancube import parse_gancube
 
-            return parse_gancube(html)
-        if host.endswith("speedcubeshop.com"):
-            from src.price_tracking.helpers.scs import parse_scs
+def extract_plain_text(html: str) -> Tuple[str, str]:
+    """Produce both raw and ASCII-normalised page text for keyword searches."""
+    soup = BeautifulSoup(html, "lxml")
+    text = soup.get_text(" ", strip=True).lower()
+    ascii_text = (
+        unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    )
+    return text, ascii_text
 
-            return parse_scs(html)
-        if host.endswith("speedcubes.co.za"):
-            from src.price_tracking.helpers.speedcubes_co_za import (
-                parse_speedcubes_co_za,
-            )
 
-            return parse_speedcubes_co_za(html)
-    except Exception as e:
-        logging.debug("   [HTML] Vendor helper failed: %r", e)
+def detect_availability_in_text(text: str, ascii_text: str) -> Optional[bool]:
+    """Infer availability using simple keyword heuristics in the page text."""
+    if any(word in ascii_text for word in OOS_KEYWORDS):
+        return False
+    if any(word in ascii_text for word in PREORDER_KEYWORDS):
+        return True
+    if any(word in ascii_text for word in INSTOCK_KEYWORDS):
+        return True
     return None
 
 
-def extract_from_html(
-    url: str, html: str, debug: bool = False
-) -> Tuple[Optional[float], Optional[bool], Dict[str, Any]]:
-    """
-    Fallback: heuristics from raw HTML text and buttons.
-    """
-    # Prefer a vendor-specific parser first
-    # Try dedicated vendor parser first (more reliable than heuristics)
-    vs = _parse_vendor_specific(url, html)
-    if vs:
-        return vs
-
-    soup = BeautifulSoup(html, "lxml")
-    text = soup.get_text(" ", strip=True).lower()
-    text_ascii = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii").lower()
-
-    available = None
-    reason = "unknown"
-
-    if any((w in text) or (w in text_ascii) for w in OOS_WORDS):
-        available = False
-        reason = "keyword:oos"
-    elif any((w in text) or (w in text_ascii) for w in PREORDER_WORDS):
-        available = True
-        reason = "keyword:preorder"
-    elif any((w in text) or (w in text_ascii) for w in INSTOCK_WORDS):
-        available = True
-        reason = "keyword:instock"
-    else:
-        # Look for common buy/add-to-cart cues in button-like elements
-        for el in soup.find_all(["button", "a", "input"]):
-            t = (el.get_text(" ", strip=True) or el.get("value") or "").strip()
-            if not t:
-                continue
-            t_low = t.lower()
-            t_ascii = unicodedata.normalize("NFKD", t_low).encode("ascii", "ignore").decode("ascii")
-            if any(
-                phrase in t_low or phrase in t_ascii
-                for phrase in (
-                    "add to cart",
-                    "add to basket",
-                    "add to bag",
-                    "buy now",
-                    "ajouter au panier",
-                    "acheter",
-                )
-            ):
-                available = True
-                reason = "button:add-to-cart"
-                break
-
-    price = None
-    match_text = None
-    price_re = re.compile(
-        r"(?:[$€£¥R]|usd|eur|gbp|zar)?\s*(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:[$€£¥R]|usd|eur|gbp|zar)?",
-        re.I,
-    )
-    m = price_re.search(text)
-    if m:
-        match_text = m.group(0)
+def detect_price_in_text(text: str, ascii_text: str) -> Optional[float]:
+    """Extract a numeric price candidate from the page text using regex."""
+    for corpus in (text, ascii_text):
+        match = PRICE_RE.search(corpus)
+        if not match:
+            continue
         try:
-            price = float(m.group(1).replace(",", "."))
-        except Exception as e:
-            if debug:
-                logging.debug(
-                    "   [HTML] Price regex parse error: %r (match=%r)", e, m.group(0)
-                )
-
-    if debug:
-        logging.debug(
-            "   [HTML] availability=%s (reason=%s) price=%s match=%r",
-            available,
-            reason,
-            price,
-            match_text,
-        )
-
-    return price, available, {"html": True, "reason": reason, "price_match": match_text}
+            return float(match.group(1).replace(",", "."))
+        except ValueError:
+            continue
+    return None
 
 
-# Override corrupted keyword constants (ensure robust matching)
-OOS_WORDS = ("out of stock", "sold out", "rupture", "épuisé", "epuise")
-PREORDER_WORDS = ("preorder", "précommande", "precommande")
+def parse_text_signals(html: str) -> ParsedSignals:
+    """Fallback parser combining text-based price and availability heuristics."""
+    text, ascii_text = extract_plain_text(html)
+    price = detect_price_in_text(text, ascii_text)
+    available = detect_availability_in_text(text, ascii_text)
+    return ParsedSignals(price, available)
 
 
-# ---- Helpers ----------------------------------------------------------------
-def decide_available(
-    http_status: int, parsed_available: Optional[bool], debug: bool = False
-) -> Tuple[Optional[bool], str]:
-    """
-    Merge HTTP signal with parsed availability.
-    404/410 -> unavailable page, else prefer parsed value.
-    """
-    if http_status in (404, 410):
-        if debug:
-            logging.debug(
-                "   [DECIDE] HTTP %s -> available=False (unavailable page)", http_status
-            )
-        return False, f"http:{http_status}"
-    if parsed_available is not None:
-        if debug:
-            logging.debug("   [DECIDE] Parsed availability -> %s", parsed_available)
-        return parsed_available, "parsed"
-    if debug:
-        logging.debug("   [DECIDE] availability unknown")
-    return None, "unknown"
+def merge_signals(primary: ParsedSignals, secondary: ParsedSignals) -> ParsedSignals:
+    """Overlay two signal sets, favouring already-populated values in ``primary``."""
+    price = primary.price if primary.price is not None else secondary.price
+    available = primary.available if primary.available is not None else secondary.available
+    return ParsedSignals(price, available)
 
 
-def ensure_debug_file(html: str, vendor: str, cube: str) -> str:
-    """
-    Save raw HTML for manual inspection when --save-html is set.
-    Files are organized as .debug/<vendor>/<cube>.html
-    """
+def collect_parsing_signals(url: str, html: str) -> ParsedSignals:
+    """Run parsers in order of fidelity and merge their outputs into one result."""
+    signals = ParsedSignals(None, None)
+    signals = merge_signals(signals, parse_jsonld_signals(html))
+    if signals.price is None or signals.available is None:
+        signals = merge_signals(signals, parse_vendor_signals(url, html))
+    if signals.price is None or signals.available is None:
+        signals = merge_signals(signals, parse_text_signals(html))
+    return signals
+
+
+# -----------------------------------------------------------------------------
+# Persistence helpers
+# -----------------------------------------------------------------------------
+
+def decide_available(status_code: int, parsed_available: Optional[bool]) -> Optional[bool]:
+    """Combine HTTP status with parsed signals to infer final availability."""
+    if status_code in (404, 410):
+        return False
+    return parsed_available
+
+
+def write_debug_html(html: str, vendor: str, cube: str) -> str:
+    """Persist the raw HTML to disk for debugging when ``--save-html`` is set."""
     base = Path(".debug") / vendor
     base.mkdir(parents=True, exist_ok=True)
-    out = base / f"{cube}.html"
-    out.write_text(html, encoding="utf-8")
-    return str(out)
+    path = base / f"{cube}.html"
+    path.write_text(html, encoding="utf-8")
+    return str(path)
 
 
-def is_supported_vendor(url: str) -> bool:
-    host = (urlparse(url).hostname or "").lower()
-    return any(host.endswith(v) for v in SUPPORTED_VENDORS)
+def calculate_streak(link: Dict[str, Any], changed: bool) -> int:
+    """Increment or reset the unchanged streak depending on whether values changed."""
+    current = int(link.get("streak_unchanged") or 0)
+    return 0 if changed else current + 1
 
 
-def vendor_host(url: str) -> str:
-    return (urlparse(url).hostname or "").lower()
+def coalesce_value(parsed: Optional[Any], existing: Optional[Any]) -> Optional[Any]:
+    """Prefer the parsed value unless it is ``None``."""
+    return parsed if parsed is not None else existing
 
 
-async def throttle_for_vendor(url: str) -> None:
-    """Enforce a minimum interval per vendor host, plus small jitter.
-
-    A lock is used per vendor so different vendors can run in parallel while
-    requests for the same vendor are serialized and respect ``VENDOR_MIN_INTERVAL``.
-    """
-    host = vendor_host(url)
-    lock = vendor_locks[host]
-    async with lock:
-        min_gap = VENDOR_MIN_INTERVAL.get(host, DEFAULT_MIN_INTERVAL)
-        now = time.monotonic()
-        wait = (last_hit_at[host] + min_gap) - now
-        if wait > 0:
-            await asyncio.sleep(wait)
-        await asyncio.sleep(random.uniform(*JITTER_RANGE))
-        last_hit_at[host] = time.monotonic()
-
-
-def recently_updated(link: dict[str, Any]) -> bool:
-    """
-    True if link.updated_at is within LINK_COOLDOWN.
-    Expects ISO 8601 with Z or offset.
-    """
-    uat = link.get("updated_at")
-    if not uat:
-        return False
-    try:
-        ts = datetime.fromisoformat(str(uat).replace("Z", "+00:00"))
-    except Exception:
-        return False
-    return datetime.now(timezone.utc) - ts < LINK_COOLDOWN
+def create_update(
+    link_id: int,
+    price: Optional[float],
+    available: Optional[bool],
+    etag: Optional[str],
+    last_modified: Optional[str],
+    streak: int,
+) -> ProcessLinkUpdate:
+    """Package the new values and cache headers for persistence."""
+    return ProcessLinkUpdate(
+        row_id=link_id,
+        price=price,
+        available=available,
+        etag=etag,
+        last_modified=last_modified,
+        streak=streak,
+    )
 
 
-def effective_cooldown(streak: int) -> timedelta:
-    # LINK_COOLDOWN * 2^streak, capped
-    exp = max(0, min(streak, BACKOFF_EXP_CAP))
-    cd = LINK_COOLDOWN * (2**exp)
-    return cd if cd <= MAX_LINK_COOLDOWN else MAX_LINK_COOLDOWN
+def create_result(
+    outcome: Literal["changed", "unchanged", "skipped", "error"],
+    price: Optional[float],
+    available: Optional[bool],
+    status_code: Optional[int],
+    update: Optional[ProcessLinkUpdate],
+) -> ProcessLinkResult:
+    """Helper constructor for the ``ProcessLinkResult`` dataclass."""
+    return ProcessLinkResult(outcome, price, available, status_code, update)
 
 
-def td_hms(td: timedelta) -> str:
-    secs = int(td.total_seconds())
-    h, rem = divmod(secs, 3600)
-    m, s = divmod(rem, 60)
-    return f"{h:02d}h{m:02d}m{s:02d}s"
+def create_skip_result(link: Dict[str, Any]) -> ProcessLinkResult:
+    """Return a skip result retaining the existing price/availability values."""
+    return create_result("skipped", link.get("price"), link.get("available"), None, None)
 
 
-def backoff_status(link: dict[str, Any]) -> tuple[bool, timedelta, timedelta, int]:
-    """
-    Returns: (in_backoff, remaining, cooldown, streak)
-    """
-    uat = link.get("updated_at")
-    streak = int(link.get("streak_unchanged") or 0)
-    if not uat:
-        return False, timedelta(0), LINK_COOLDOWN, streak
-    try:
-        ts = datetime.fromisoformat(str(uat).replace("Z", "+00:00"))
-    except Exception:
-        return False, timedelta(0), LINK_COOLDOWN, streak
-
-    cooldown = effective_cooldown(streak)
-    elapsed = datetime.now(timezone.utc) - ts
-    remaining = cooldown - elapsed
-    return (remaining > timedelta(0), max(remaining, timedelta(0)), cooldown, streak)
+def create_error_result(link: Dict[str, Any]) -> ProcessLinkResult:
+    """Return an error result keeping the pre-existing values untouched."""
+    return create_result("error", link.get("price"), link.get("available"), None, None)
 
 
-async def process_link(
-    link: dict[str, Any],
-    client: httpx.AsyncClient,
-    progress: Progress,
-    task_id: TaskID,
-    args: argparse.Namespace,
-) -> tuple[list[dict[str, Any]], int, int, int, int]:
-    """Process a single vendor link and return its outcome.
+def create_not_modified_update(
+    link: Dict[str, Any],
+    etag: Optional[str],
+    last_modified: Optional[str],
+) -> ProcessLinkUpdate:
+    """Build an update payload for 304 responses that only adjust metadata."""
+    streak = calculate_streak(link, changed=False)
+    return create_update(
+        link["id"],
+        link.get("price"),
+        link.get("available"),
+        etag,
+        last_modified,
+        streak,
+    )
 
-    Returns a tuple of ``(change_log, changed, unchanged, skipped, error)``.
-    """
-    vendor = link["vendor_name"]
+
+def create_not_modified_result(
+    link: Dict[str, Any],
+    status_code: int,
+    etag: Optional[str],
+    last_modified: Optional[str],
+) -> ProcessLinkResult:
+    """Return a result for 304 responses so the caller updates metadata."""
+    update = create_not_modified_update(link, etag, last_modified)
+    return create_result(
+        "unchanged", link.get("price"), link.get("available"), status_code, update
+    )
+
+
+def should_skip_vendor(link: Dict[str, Any]) -> bool:
+    """True when the link host is not in the supported vendor list."""
+    return not is_supported_vendor(link["url"])
+
+
+def should_skip_cooldown(link: Dict[str, Any], force: bool) -> bool:
+    """True when the link was processed recently and ``force`` is not enabled."""
+    return (not force) and recently_updated(link)
+
+
+def log_skip_reason(vendor: str, reason: str, url: str) -> None:
+    """Emit a debug log explaining why a link was skipped."""
+    logging.debug("[%s] %s -> skip (%s)", vendor, url, reason)
+
+
+def log_fetch_failure(vendor: str, url: str, exc: Exception) -> None:
+    """Log request exceptions so that transient issues are visible."""
+    logging.error("[%s] %s -> request failed: %s", vendor, url, exc)
+
+
+def log_fetch_status(vendor: str, url: str, status_code: int) -> None:
+    """Log successful HTTP responses for traceability."""
+    logging.info("[%s] %s -> HTTP %s", vendor, url, status_code)
+
+
+def log_change(
+    vendor: str,
+    old_price: Optional[float],
+    new_price: Optional[float],
+    old_available: Optional[bool],
+    new_available: Optional[bool],
+) -> None:
+    """Log the before/after values when a price or availability changes."""
+    logging.debug(
+        "[%s] price:%s -> %s, available:%s -> %s",
+        vendor,
+        old_price,
+        new_price,
+        old_available,
+        new_available,
+    )
+
+
+def apply_update(update: ProcessLinkUpdate) -> None:
+    """Persist the staged update back to Supabase."""
+    payload: Dict[str, Any] = {
+        "price": update.price,
+        "available": update.available,
+        "streak_unchanged": update.streak,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    if update.etag is not None:
+        payload["etag"] = update.etag
+    if update.last_modified is not None:
+        payload["last_modified"] = update.last_modified
+    supabase.table("cube_vendor_links").update(payload).eq("id", update.row_id).execute()
+
+
+# -----------------------------------------------------------------------------
+# Processing logic
+# -----------------------------------------------------------------------------
+
+def process_link_with_session(
+    link: Dict[str, Any],
+    client: httpx.Client,
+    options: ProcessOptions,
+) -> ProcessLinkResult:
+    """Process a single vendor link using an existing HTTP client session."""
     url = link["url"]
-    cube_slug = link["cube_slug"]
-    progress.update(task_id, description=f"[cyan]{vendor}[/] • {cube_slug}")
+    vendor = link["vendor_name"]
 
-    change_log: list[dict[str, Any]] = []
-    changed_count = 0
-    unchanged_count = 0
-    skipped_count = 0
-    error_count = 0
+    if should_skip_vendor(link):
+        log_skip_reason(vendor, "unsupported vendor", url)
+        return create_skip_result(link)
+
+    if should_skip_cooldown(link, options.force):
+        log_skip_reason(vendor, "cooldown active", url)
+        return create_skip_result(link)
 
     try:
-        if not is_supported_vendor(url):
-            skipped_count = 1
-            logging.warning("0) SKIP    | Unsupported vendor for URL: %s", url)
-            return (
-                change_log,
-                changed_count,
-                unchanged_count,
-                skipped_count,
-                error_count,
-            )
-
-        in_backoff, remaining, cooldown, streak = backoff_status(link)
-        if in_backoff and not args.force:
-            skipped_count = 1
-            logging.info(
-                "0) SKIP    | Backoff active (streak=%s cooldown=%s remaining=%s)",
-                streak,
-                td_hms(cooldown),
-                td_hms(remaining),
-            )
-            return (
-                change_log,
-                changed_count,
-                unchanged_count,
-                skipped_count,
-                error_count,
-            )
-
-        await throttle_for_vendor(url)
-
-        # 1) FETCH
-        logging.info("1) FETCH   | requesting page...")
-        try:
-            status, html, headers, final_url = await fetch_page_content(
-                client,
-                url,
-                etag=link.get("etag"),
-                last_modified=link.get("last_modified"),
-                debug=args.debug,
-            )
-        except Exception as e:
-            error_count = 1
-            logging.error("Fetch failed: %r", e)
-            return (
-                change_log,
-                changed_count,
-                unchanged_count,
-                skipped_count,
-                error_count,
-            )
-        logging.info("   FETCHED | HTTP=%s final_url=%s", status, final_url)
-
-        if status == 304:
-            logging.info("   NOTMOD | resource not modified; updating row anyway")
-            # Treat as an update to refresh updated_at, cache headers and reset streak
-            await asyncio.to_thread(
-                update_vendor_link,
-                link,
-                link.get("price"),
-                link.get("available"),
-                "not-modified",
-                headers.get("etag"),
-                headers.get("last-modified"),
-            )
-            unchanged_count = 1
-            return (
-                change_log,
-                changed_count,
-                unchanged_count,
-                skipped_count,
-                error_count,
-            )
-
-        # Handle back-pressure (429 / 503) once
-        if status in (429, 503):
-            # Respect Retry-After when present; otherwise use a conservative wait
-            wait_for = max(respect_retry_after(headers), 30.0)
-            logging.warning("   BACKOFF | status=%s waiting %.1fs", status, wait_for)
-            await asyncio.sleep(wait_for)
-            await throttle_for_vendor(url)
-            try:
-                status, html, headers, final_url = await fetch_page_content(
-                    client,
-                    url,
-                    etag=link.get("etag"),
-                    last_modified=link.get("last_modified"),
-                    debug=args.debug,
-                )
-            except Exception as e:
-                error_count = 1
-                logging.error("Retry fetch failed: %r", e)
-                return (
-                    change_log,
-                    changed_count,
-                    unchanged_count,
-                    skipped_count,
-                    error_count,
-                )
-            logging.info("   RETRIED | HTTP=%s final_url=%s", status, final_url)
-
-            if status == 304:
-                logging.info("   NOTMOD | resource not modified; updating row anyway")
-                # Treat as an update to refresh updated_at, cache headers and reset streak
-                await asyncio.to_thread(
-                    update_vendor_link,
-                    link,
-                    link.get("price"),
-                    link.get("available"),
-                    "not-modified",
-                    headers.get("etag"),
-                    headers.get("last-modified"),
-                )
-                unchanged_count = 1
-                return (
-                    change_log,
-                    changed_count,
-                    unchanged_count,
-                    skipped_count,
-                    error_count,
-                )
-
-        etag_hdr = headers.get("etag")
-        last_mod_hdr = headers.get("last-modified")
-
-        if args.save_html:
-            path = await asyncio.to_thread(ensure_debug_file, html, vendor, cube_slug)
-            logging.info("   SAVED   | HTML -> %s", path)
-
-        # 2) JSON-LD
-        logging.info("2) JSON-LD | extracting structured data...")
-        price, available, raw = None, None, {}
-        product_node = extract_json_ld_block(html, debug=args.debug)
-        if product_node:
-            price, available, raw = extract_from_json_ld(product_node, debug=args.debug)
-        logging.info("   JSON-LD | price=%s available=%s", price, available)
-
-        # 3) HTML fallback
-        if price is None or available is None:
-            logging.info("3) HTML    | falling back to HTML heuristics...")
-            p2, a2, raw2 = extract_from_html(final_url, html, debug=args.debug)
-            if price is None:
-                price = p2
-            if available is None:
-                available = a2
-            raw.update(raw2)
-        logging.info("   HTML    | price=%s available=%s", price, available)
-
-        # 4) DECIDE availability
-        logging.info("4) DECIDE  | merging HTTP + parse signals...")
-        final_available, reason = decide_available(status, available, debug=args.debug)
-        logging.info(
-            "   DECIDE  | final_available=%s reason=%s", final_available, reason
+        response = fetch_product_response(
+            client,
+            url,
+            etag=link.get("etag"),
+            last_modified=link.get("last_modified"),
         )
+    except Exception as exc:  # pragma: no cover - network errors depend on env
+        log_fetch_failure(vendor, url, exc)
+        return create_error_result(link)
 
-        # Compare vs DB row; don’t lose explicit False/0.00
-        new_price = price if price is not None else link["price"]
-        new_available = (
-            final_available if final_available is not None else link["available"]
-        )
+    log_fetch_status(vendor, url, response.status_code)
+    etag, last_modified = extract_cache_headers(response)
 
-        changed = (new_price != link["price"]) or (new_available != link["available"])
-        logging.info(
-            "   CHECK   | changed=%s (old_price=%s old_av=%s)",
-            changed,
-            link["price"],
-            link["available"],
-        )
+    if response.status_code == 304:
+        return create_not_modified_result(link, response.status_code, etag, last_modified)
 
-        try:
-            if changed:
-                field_changes = []
-                if new_price != link["price"]:
-                    field_changes.append(("price", link["price"], new_price))
-                if new_available != link["available"]:
-                    field_changes.append(
-                        ("available", link["available"], new_available)
-                    )
-                change_log.append(
-                    {
-                        "vendor_name": link["vendor_name"],
-                        "cube_slug": link["cube_slug"],
-                        "changes": field_changes,
-                    }
-                )
-                await asyncio.to_thread(
-                    update_vendor_link,
-                    link,
-                    new_price,
-                    new_available,
-                    reason,
-                    etag_hdr,
-                    last_mod_hdr,
-                )
-                changed_count = 1
-            else:
-                # Update row even when values are unchanged (refresh updated_at and reset streak)
-                await asyncio.to_thread(
-                    update_vendor_link,
-                    link,
-                    new_price,
-                    new_available,
-                    "unchanged",
-                    etag_hdr,
-                    last_mod_hdr,
-                )
-                logging.info("5) UPDATE  | values unchanged; row refreshed.")
-                unchanged_count = 1
-        except Exception as e:
-            error_count = 1
-            logging.error("DB update failed: %r", e)
+    html = response.text
+    if options.save_html:
+        path = write_debug_html(html, vendor, link["cube_slug"])
+        logging.debug("[%s] HTML saved to %s", vendor, path)
 
-        if args.debug:
-            # Truncate raw signals to avoid huge logs
-            logging.debug("RAW SIGNALS: %s", json.dumps(raw, ensure_ascii=False)[:2000])
+    signals = collect_parsing_signals(url, html)
+    final_available = decide_available(response.status_code, signals.available)
 
-        return (
-            change_log,
-            changed_count,
-            unchanged_count,
-            skipped_count,
-            error_count,
-        )
+    old_price = link.get("price")
+    old_available = link.get("available")
+    new_price = coalesce_value(signals.price, old_price)
+    new_available = coalesce_value(final_available, old_available)
+
+    changed = (new_price != old_price) or (new_available != old_available)
+    streak = calculate_streak(link, changed)
+    update = create_update(link["id"], new_price, new_available, etag, last_modified, streak)
+
+    log_change(vendor, old_price, new_price, old_available, new_available)
+
+    outcome: Literal["changed", "unchanged"] = "changed" if changed else "unchanged"
+    return create_result(outcome, new_price, new_available, response.status_code, update)
+
+
+def process_link(
+    link: Any,
+    *,
+    client: Optional[httpx.Client] = None,
+    force: bool = False,
+    debug: bool = False,  # Kept for CLI parity; logging level handles verbosity.
+    save_html: bool = False,
+) -> ProcessLinkResult:
+    """Process a link dict (or raw URL) and return the parsed outcome."""
+    options = ProcessOptions(force=force, save_html=save_html)
+    owns_client = client is None
+    session = client or httpx.Client(timeout=REQUEST_TIMEOUT, follow_redirects=True)
+    link_dict = link
+    suppress_update = False
+    if isinstance(link, str):
+        # Allow lightweight callers to supply a bare URL; fabricate the minimal row
+        # structure expected by the rest of the pipeline and avoid DB updates.
+        host = vendor_host(link)
+        link_dict = {
+            "id": None,
+            "url": link,
+            "vendor_name": host or "",
+            "cube_slug": host or "",
+            "price": None,
+            "available": None,
+            "etag": None,
+            "last_modified": None,
+            "streak_unchanged": 0,
+            "updated_at": None,
+        }
+        suppress_update = True
+    try:
+        result = process_link_with_session(link_dict, session, options)
+        if suppress_update:
+            result.update = None
+        return result
     finally:
-        progress.advance(task_id)
+        if owns_client:
+            session.close()
 
 
-# ---- Main -------------------------------------------------------------------
-if __name__ == "__main__":
-    args = parser.parse_args()
+def persist_process_result(result: ProcessLinkResult) -> None:
+    """Apply the database update contained in a ``ProcessLinkResult``."""
+    if result.update is None:
+        return
+    apply_update(result.update)
 
-    # Configure logging:
-    # - Default: logs OFF (except warnings/errors from libraries)
-    # - --log  : INFO
-    # - --debug: DEBUG
-    log_level = logging.WARNING
-    if args.log:
-        log_level = logging.INFO
-    if args.debug:
-        log_level = logging.DEBUG
 
-    logging.basicConfig(
-        level=log_level,
-        format="%(message)s",
-        datefmt="[%X]",
-        handlers=[RichHandler(rich_tracebacks=True)],
-    )
+# -----------------------------------------------------------------------------
+# CLI runner
+# -----------------------------------------------------------------------------
 
-    console.rule("[bold cyan]CubeIndex Price Tracker")
-    console.print("Loading vendor links from database...")
-
-    links = get_vendor_links(args.limit if args.limit > 0 else 100, force=args.force)
-
+def run(args: argparse.Namespace) -> Dict[str, int]:
+    """Entry point for the CLI: iterate through links and collect stats."""
+    links = load_vendor_links(args.limit, args.force)
+    stats = {"changed": 0, "unchanged": 0, "skipped": 0, "errors": 0}
     if not links:
-        console.print("[red]No vendor links found.[/]")
-        sys.exit(1)
+        logging.info("No vendor links to process.")
+        return stats
 
-    total = len(links)
-    console.print(f"[green]Found {total} link(s). Starting run...[/]")
+    with httpx.Client(timeout=REQUEST_TIMEOUT, follow_redirects=True) as client:
+        for link in links:
+            result = process_link(
+                link,
+                client=client,
+                force=args.force,
+                debug=args.debug,
+                save_html=args.save_html,
+            )
+            persist_process_result(result)
+            if result.outcome == "error":
+                stats["errors"] += 1
+            elif result.outcome in stats:
+                stats[result.outcome] += 1
 
-    async def runner() -> list[tuple[list[dict[str, Any]], int, int, int, int]]:
-        async with httpx.AsyncClient() as client:
-            with Progress(
-                TextColumn("[bold]{task.description}"),
-                BarColumn(),
-                TaskProgressColumn(),
-                TimeElapsedColumn(),
-                TimeRemainingColumn(),
-                transient=False,
-                console=console,
-            ) as progress:
-                task = progress.add_task("Processing", total=total)
-                sem = asyncio.Semaphore(WORKER_CONCURRENCY)
+    return stats
 
-                async def sem_task(link: dict[str, Any]):
-                    async with sem:
-                        return await process_link(link, client, progress, task, args)
 
-                return await asyncio.gather(*(sem_task(l) for l in links))
-
-    results = asyncio.run(runner())
-
-    change_log: list[dict[str, Any]] = []
-    changed_count = 0
-    unchanged_count = 0
-    skipped_count = 0
-    error_count = 0
-    for clog, changed, unchanged, skipped, error in results:
-        change_log.extend(clog)
-        changed_count += changed
-        unchanged_count += unchanged
-        skipped_count += skipped
-        error_count += error
-
-    console.rule("[bold]Summary")
-    console.print(
-        f"[green]Changed:[/] {changed_count}  "
-        f"[yellow]Unchanged:[/] {unchanged_count}  "
-        f"[blue]Skipped:[/] {skipped_count}  "
-        f"[red]Errors:[/]{error_count}"
+def main() -> None:
+    """CLI bootstrap that configures logging and kicks off processing."""
+    args = parse_args()
+    logging.basicConfig(
+        level=logging.DEBUG if args.debug else logging.INFO,
+        format="%(message)s",
     )
-    if change_log:
-        table = Table(title="Updated Fields")
-        table.add_column("Vendor")
-        table.add_column("Cube")
-        table.add_column("Field")
-        table.add_column("Old")
-        table.add_column("New")
-        for entry in change_log:
-            vendor = entry["vendor_name"]
-            cube = entry["cube_slug"]
-            for field, old, new in entry["changes"]:
-                table.add_row(vendor, cube, field, str(old), str(new))
-        console.print(table)
+
+    logging.info("Loading vendor links (limit=%s, force=%s)...", args.limit, args.force)
+    stats = run(args)
+    logging.info(
+        "Done. Changed=%s  Unchanged=%s  Skipped=%s  Errors=%s",
+        stats["changed"],
+        stats["unchanged"],
+        stats["skipped"],
+        stats["errors"],
+    )
+
+
+if __name__ == "__main__":
+    main()
