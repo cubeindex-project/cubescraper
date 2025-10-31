@@ -41,6 +41,7 @@ def ziicube_cube_details(html: str) -> Specs:
         "wca_legal": None,
         "modded": None,
         "ball_core": None,
+        "source": "ziicube"
     }
 
     preview = soup.select_one("#preview")

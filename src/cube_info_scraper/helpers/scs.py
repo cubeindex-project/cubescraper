@@ -1,4 +1,4 @@
-import re, sys, os, json
+import re, sys, os
 from bs4 import BeautifulSoup
 
 sys.path.append(
@@ -34,6 +34,7 @@ def scs_cube_details(html: str) -> Specs:
         "wca_legal": None,
         "modded": None,
         "ball_core": None,
+        "source": "scs"
     }
 
     img = soup.select_one("img[id^='product-featured-image']")
@@ -54,16 +55,16 @@ def scs_cube_details(html: str) -> Specs:
 
         if "uv coated" in nameLow:
             specs["surface_finish"] = "UV Coated"
-        elif any(token in nameLow for token in ["limited", "anniversary"]):
+        if any(token in nameLow for token in ["limited", "anniversary"]):
             specs["version_type"] = "Limited"
-        elif "magnetic" in nameLow:
+        if "magnetic" in nameLow:
             specs["magnetic"] = True
-        elif "maglev" in nameLow:
+        if "maglev" in nameLow:
             specs["maglev"] = True
-        elif "smart" in nameLow:
+        if "smart" in nameLow:
             specs["smart"] = True
             specs["wca_legal"] = False
-        elif any(token in nameLow for token in ["ball core", "ball-core"]):
+        if any(token in nameLow for token in ["ball core", "ball-core"]):
             specs["ball_core"] = True
 
     table = soup.select_one("#collapse-tab3")

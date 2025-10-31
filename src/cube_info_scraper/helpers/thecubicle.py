@@ -35,6 +35,7 @@ def thecubicle_cube_details(html: str) -> Specs:
         "wca_legal": None,
         "modded": None,
         "ball_core": None,
+        "source": "thecubicle"
     }
 
     nameLbl = soup.find("h1", {"itemprop": "name"})
