@@ -31,5 +31,5 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           echo ">>> Starting cube price fetch job..."
-          python src/price_tracking/fetch_cube_price.py --log --debug --limit 150
+          python src/price_tracking/fetch_cube_price.py --debug --limit 150
           echo ">>> Job finished."
