@@ -153,7 +153,6 @@ class Specs(TypedDict):
     wca_legal: Optional[bool]
     modded: Optional[bool]
     ball_core: Optional[bool]
-    source: str
 
 
 class CubeDBSchema(TypedDict):
@@ -178,6 +177,7 @@ class CubeDBSchema(TypedDict):
 class CubeFeaturesDBSchema(TypedDict):
     cube: str
     feature: str
+
 
 class VendorLinkCandidate(TypedDict):
     vendor_name: str
@@ -237,7 +237,9 @@ def fetch_jobs(limit: int = 100) -> List[Dict[str, Any]]:
 
     try:
         query = (
-            supabase.table("cube_scrap_runs").select("id, user_id").order("created_at")
+            supabase.table("cube_scrap_runs")
+            .select("id, user_id, link")
+            .order("created_at")
         )
 
         if not args.force:
@@ -255,32 +257,6 @@ def fetch_jobs(limit: int = 100) -> List[Dict[str, Any]]:
     return jobs.data
 
 
-def fetch_job_links(job_id: str) -> list[str]:
-    logger.info("Fetching job links for job_id=%s...", job_id)
-
-    raw_job_links = (
-        supabase.table("cube_scrap_runs_url")
-        .select("normalized_url")
-        .order("created_at")
-        .eq("run_id", job_id)
-        .execute()
-    )
-
-    job_links = [
-        row.get("normalized_url")
-        for row in raw_job_links.data
-        if row.get("normalized_url")
-    ]
-
-    if not job_links:
-        logger.error("No job links found for job_id=%s!", job_id)
-        sys.exit(1)
-
-    logger.info("%d links fetched.", len(job_links))
-    logger.debug("Processing job links...")
-    return job_links  # type: ignore
-
-
 def _resolve_parser(hostname: str) -> Optional[Callable[[str], Specs]]:
     if hostname.endswith("thecubicle.com"):
         from src.cube_info_scraper.helpers.thecubicle import thecubicle_cube_details
@@ -293,336 +269,8 @@ def _resolve_parser(hostname: str) -> Optional[Callable[[str], Specs]]:
     return None
 
 
-def fetch_store_cube_details(job_links: list[str]) -> list[Specs]:
-    store_cube_details: list[Specs] = []
-
-    for index, link in enumerate(job_links, start=1):
-        parsed_link = urlparse(link)
-        hostname = (parsed_link.hostname or "").lower()
-
-        if not any(hostname.endswith(domain) for domain in SUPPORTED_STORES):
-            logger.warning("Skipping unsupported store: %s", parsed_link.hostname)
-            continue
-
-        parser = _resolve_parser(hostname)
-        if parser is None:
-            logger.warning("No parser implemented for %s", parsed_link.hostname)
-            continue
-
-        try:
-            response = requests.get(
-                link, headers=USER_AGENT_HEADERS, timeout=REQUEST_TIMEOUT_SECONDS
-            )
-        except requests.RequestException as exc:
-            logger.error("Failed to fetch %s: %s", link, exc)
-            continue
-
-        store_cube_details.append(parser(response.text))
-        logger.debug("Link %s/%s processed (%s).", index, len(job_links), link)
-
-    logger.info("All links processed.")
-    return store_cube_details
-
-
-def verify_cube_details(store_cube_details: list[Specs]) -> None:
-    logger.info("Verifying data consistency across links...")
-
-    verif_score = 0
-    pairs_checked = 0
-
-    for previous, current in zip(store_cube_details, store_cube_details[1:]):
-        name_a, name_b = previous.get("name", ""), current.get("name", "")
-        brand_a, brand_b = previous.get("brand", ""), current.get("brand", "")
-        type_a, type_b = previous.get("type", ""), current.get("type", "")
-
-        if not name_a or not name_b:
-            logger.warning("Missing name in one of the entries, skipping comparison.")
-            continue
-
-        if not brand_a or not brand_b:
-            logger.warning("Missing brand in one of the entries, skipping comparison.")
-            continue
-
-        if not type_a or not type_b:
-            logger.warning("Missing type in one of the entries, skipping comparison.")
-            continue
-
-        name_match_percent = fuzz.token_sort_ratio(name_a.lower(), name_b.lower())
-        brand_match_percent = fuzz.token_sort_ratio(brand_a.lower(), brand_b.lower())
-        type_match_percent = fuzz.token_sort_ratio(type_a.lower(), type_b.lower())
-
-        pairs_checked += 1
-        if (
-            name_match_percent >= SIMILARITY_THRESHOLD
-            and brand_match_percent >= SIMILARITY_THRESHOLD
-            and type_match_percent >= SIMILARITY_THRESHOLD
-        ):
-            verif_score += 1
-
-    if verif_score != pairs_checked:
-        logger.error(
-            "Only %s/%s pairs matched (threshold %s%%).",
-            verif_score,
-            pairs_checked,
-            SIMILARITY_THRESHOLD,
-        )
-        sys.exit(1)
-
-    logger.info("All links match the same cube.")
-
-
-Resolver = Callable[[list[Any]], Any]
-
-
-def _first_non_none(values: Iterable[Any]) -> Any:
-    for v in values:
-        if v is not None and v != "":
-            return v
-    return None
-
-
-def _most_common(values: Iterable[Any]) -> Any:
-    vals = [v for v in values if v is not None and v != ""]
-    return Counter(vals).most_common(1)[0][0] if vals else None
-
-
-def _to_date(v: Any) -> Optional[date]:
-    if isinstance(v, datetime):
-        return v.date()
-    if isinstance(v, date):
-        return v
-    if isinstance(v, str) and v.strip():
-        for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y"):
-            try:
-                return datetime.strptime(v, fmt).date()
-            except ValueError:
-                pass
-    return None
-
-
-def _resolve_release_date(values: List[Any]) -> Optional[str]:
-    dates = [_to_date(v) for v in values]
-    dates = [d for d in dates if d is not None]
-    return min(dates).isoformat() if dates else None
-
-
-def _resolve_image(values: list[Any]) -> Optional[str]:
-    # first non-empty URL wins; fall back to last non-empty if you prefer
-    return _first_non_none(values)
-
-
-VALID_TYPES = {
-    "Square-1",
-    "3x3x3",
-    "2x2x2",
-    "4x4x4",
-    "5x5x5",
-    "6x6x6",
-    "7x7x7",
-    "8x8x8",
-    "9x9x9",
-    "10x10x10",
-    "Megaminx",
-    "Gigaminx",
-    "Kilominx",
-    "Master Kilominx",
-    "Teraminx",
-    "Petaminx",
-    "Pyraminx",
-    "Skewb",
-    "Mirror",
-    "Gear Cube",
-    "Shape Mod",
-    "Clock",
-    "1x3x3",
-    "1x1x2",
-    "Other",
-}
-
-ALLOWED_TYPES = [
-    "Square-1",
-    "3x3x3",
-    "2x2x2",
-    "4x4x4",
-    "5x5x5",
-    "6x6x6",
-    "7x7x7",
-    "8x8x8",
-    "9x9x9",
-    "10x10x10",
-    "Megaminx",
-    "Pyraminx",
-    "Gigaminx",
-    "Kilominx",
-    "Master Kilominx",
-    "Teraminx",
-    "Petaminx",
-    "Skewb",
-    "Mirror",
-    "Gear Cube",
-    "Shape Mod",
-    "Clock",
-    "1x3x3",
-    "1x1x2",
-    "Other",
-]
-_CANON_LC = {c.lower(): c for c in ALLOWED_TYPES}
-
-ALIASES = {
-    "sq1": "Square-1",
-    "square1": "Square-1",
-    "square one": "Square-1",
-    "3x3": "3x3x3",
-    "2x2": "2x2x2",
-    "4x4": "4x4x4",
-    "5x5": "5x5x5",
-    "6x6": "6x6x6",
-    "7x7": "7x7x7",
-    "8x8": "8x8x8",
-    "9x9": "9x9x9",
-    "10x10": "10x10x10",
-    "mirror cube": "Mirror",
-    "gear": "Gear Cube",
-    "clock cube": "Clock",
-    "megaminx cube": "Megaminx",
-    "pyraminx cube": "Pyraminx",
-    "skewb cube": "Skewb",
-}
-
-# 3x3, 3x3x3, 3×3×3, "3 x 3", with optional "cube"
-_NXN = re.compile(r"^\s*(\d{1,2})\s*[x×*]\s*\1(?:\s*[x×*]\s*\1)?\s*(?:cube)?\s*$", re.I)
-
-
-def canonicalize_type(raw: Optional[str], cutoff: float = 0.74) -> str:
-    if not raw or not str(raw).strip():
-        return "Other"
-    s = re.sub(r"\s+", " ", str(raw).strip().lower())
-
-    # NxNxN normalize → "NxNxN"
-    m = _NXN.match(s)
-    if m:
-        n = m.group(1)
-        nxn = f"{n}x{n}x{n}"
-        if nxn in _CANON_LC:  # e.g., 3x3→3x3x3
-            return _CANON_LC[nxn]
-
-    # alias or exact canonical
-    if s in ALIASES:
-        return ALIASES[s]
-    if s in _CANON_LC:
-        return _CANON_LC[s]
-
-    # fuzzy over known terms (canonical + aliases)
-    corpus = list(_CANON_LC.keys()) + list(ALIASES.keys())
-    match = get_close_matches(s, corpus, n=1, cutoff=cutoff)
-    if match:
-        k = match[0]
-        return _CANON_LC.get(k, ALIASES.get(k, "Other"))
-
-    return "Other"
-
-
-def _resolve_type(values: Iterable[Optional[str]], cutoff: float = 0.74) -> str:
-    canon = [canonicalize_type(v, cutoff) for v in values if v and str(v).strip()]
-    if not canon:
-        return "Other"
-    top = Counter(canon).most_common(1)[0][0]
-    return top
-
-
-def _resolve_bool(values: List[Any]) -> Optional[bool]:
-    seen_true = False
-    seen_false = False
-    for v in values:
-        if v == True:
-            seen_true = True
-        elif v == False:
-            seen_false = True
-
-    if seen_true:
-        return True
-    if seen_false:
-        return False
-    return None
-
-
-def _resolve_numeric(values: list[Any]) -> Optional[float]:
-    nums: list[float] = []
-    for v in values:
-        if v is None or v == "":
-            continue
-        try:
-            nums.append(float(v))
-        except (TypeError, ValueError):
-            pass
-    # Pick most common numeric, or first, or median—your choice:
-    return _most_common(nums) if nums else None
-
-
-def _resolve_string(values: list[Any]) -> Optional[str]:
-    vals = [str(v) for v in values if v not in (None, "")]
-    if not vals:
-        return None
-    counts = Counter(vals).most_common()
-    top_count = counts[0][1]
-    candidates = [v for v, c in counts if c == top_count]
-    return candidates[0]  # first most-common
-
-
-RULES: dict[str, Resolver] = {
-    "release_date": _resolve_release_date,
-    "image_url": _resolve_image,
-    # booleans
-    "magnetic": _resolve_bool,
-    "maglev": _resolve_bool,
-    "smart": _resolve_bool,
-    "stickered": _resolve_bool,
-    "wca_legal": _resolve_bool,
-    "modded": _resolve_bool,
-    "ball_core": _resolve_bool,
-    # numerics
-    "weight": _resolve_numeric,
-    "size": _resolve_numeric,
-    # strings (explicit if you want, else default below handles)
-    # "name": _resolve_string,
-    # "brand": _resolve_string,
-    "type": lambda vals: _resolve_type(vals, cutoff=0.74),
-    # "version_type": _resolve_string,
-    # "surface_finish": _resolve_string,
-    # "discontinued": _resolve_bool,  # if this is actually boolean
-}
-
-
-ALL_KEYS = [
-    "name",
-    "brand",
-    "image_url",
-    "type",
-    "discontinued",
-    "release_date",
-    "weight",
-    "version_type",
-    "surface_finish",
-    "size",
-    "magnetic",
-    "maglev",
-    "smart",
-    "stickered",
-    "wca_legal",
-    "modded",
-    "ball_core",
-]
-
-
-def merge_cube_details(rows: list[Specs]) -> Specs:
-    # 1) collect all candidate values per key (preserve input order for tie-breakers)
-    bucket: dict[str, list[Any]] = defaultdict(list)
-    for row in rows:
-        for k in ALL_KEYS:
-            bucket[k].append(row.get(k))
-
-    # 2) resolve each key with the appropriate rule
-    merged: Specs = {
+def fetch_store_cube_details(job_link: str) -> Specs | None:
+    store_cube_details: Specs = {
         "name": None,
         "brand": None,
         "image_url": None,
@@ -640,24 +288,31 @@ def merge_cube_details(rows: list[Specs]) -> Specs:
         "wca_legal": None,
         "modded": None,
         "ball_core": None,
-        "source": "",
     }
 
-    for k in ALL_KEYS:
-        values = bucket.get(k, [])
-        resolver = RULES.get(k)
-        if resolver is None:
-            # default: prefer most common non-empty string; else first non-none for other types
-            # You can specialize further if needed.
-            merged[k] = (
-                _resolve_string(values)
-                if any(isinstance(v, str) for v in values if v is not None)
-                else _first_non_none(values)
-            )
-        else:
-            merged[k] = resolver(values)
+    parsed_link = urlparse(job_link)
+    hostname = (parsed_link.hostname or "").lower()
+    if not any(hostname.endswith(domain) for domain in SUPPORTED_STORES):
+        logger.warning("Skipping unsupported store: %s", parsed_link.hostname)
+        return None
 
-    return merged
+    parser = _resolve_parser(hostname)
+    if parser is None:
+        logger.warning("No parser implemented for %s", parsed_link.hostname)
+        return None
+
+    try:
+        response = requests.get(
+            job_link, headers=USER_AGENT_HEADERS, timeout=REQUEST_TIMEOUT_SECONDS
+        )
+    except requests.RequestException as exc:
+        logger.error("Failed to fetch %s: %s", job_link, exc)
+        return None
+
+    store_cube_details = parser(response.text)
+    logger.debug("Link processed (%s).", job_link)
+
+    return store_cube_details
 
 
 def _resolve_vendor_name(url: str) -> Optional[str]:
@@ -668,42 +323,42 @@ def _resolve_vendor_name(url: str) -> Optional[str]:
     return None
 
 
-def prepare_vendor_links(job_links: list[str]) -> List[VendorLinkCandidate]:
+def prepare_vendor_links(job_link: str) -> List[VendorLinkCandidate] | None:
     vendor_links: List[VendorLinkCandidate] = []
-    for link in job_links:
-        vendor_name = _resolve_vendor_name(link)
-        if not vendor_name:
-            logger.debug("Skipping vendor link for unsupported host: %s", link)
-            continue
 
-        try:
-            result = process_link(link, force=True)
-        except Exception as exc:  # pragma: no cover - network errors depend on env
-            logger.warning(
-                "Failed to fetch vendor details for %s (%s). Falling back to placeholders.",
-                link,
-                exc,
-            )
-            vendor_links.append(
-                {
-                    "vendor_name": vendor_name,
-                    "url": link,
-                    "price": None,
-                    "available": None,
-                }
-            )
-            continue
+    vendor_name = _resolve_vendor_name(job_link)
+    if not vendor_name:
+        logger.debug("Skipping vendor link for unsupported host: %s", job_link)
+        return None
 
-        price = result.price if result.outcome != "error" else None
-        available = result.available if result.outcome != "error" else None
+    try:
+        result = process_link(job_link, force=True)
+    except Exception as exc:  # pragma: no cover - network errors depend on env
+        logger.warning(
+            "Failed to fetch vendor details for %s (%s). Falling back to placeholders.",
+            job_link,
+            exc,
+        )
         vendor_links.append(
             {
                 "vendor_name": vendor_name,
-                "url": link,
-                "price": price,
-                "available": available,
+                "url": job_link,
+                "price": None,
+                "available": None,
             }
         )
+        return vendor_links
+
+    price = result.price if result.outcome != "error" else None
+    available = result.available if result.outcome != "error" else None
+    vendor_links.append(
+        {
+            "vendor_name": vendor_name,
+            "url": job_link,
+            "price": price,
+            "available": available,
+        }
+    )
 
     return vendor_links
 
@@ -955,12 +610,10 @@ def parse_series_and_model(raw_name: str, raw_brand: str) -> Tuple[str, str, str
 
 
 def prepare_insert_payload(
-    merged: Specs,
+    cube_details: Specs,
     submitted_by_id: Optional[str],
-    vendor_links: List[VendorLinkCandidate],
-) -> Tuple[
-    CubeDBSchema, List[CubeFeaturesDBSchema], List[VendorLinkInsertPayload]
-]:
+    vendor_links: List[VendorLinkCandidate] | None,
+) -> Tuple[CubeDBSchema, List[CubeFeaturesDBSchema], List[VendorLinkInsertPayload]]:
     logger.info("Preparing data for insert into the database...")
 
     if submitted_by_id is None:
@@ -986,10 +639,8 @@ def prepare_insert_payload(
         "submitted_by_id": submitted_by_id,
     }
 
-    features_payload: List[CubeFeaturesDBSchema] = []
-
-    raw_name = merged.get("name") or ""
-    raw_brand = (merged.get("brand") or "").strip()
+    raw_name = cube_details.get("name") or ""
+    raw_brand = (cube_details.get("brand") or "").strip()
 
     parsed_series, parsed_model, parsed_version_name = parse_series_and_model(
         raw_name, raw_brand
@@ -1008,31 +659,40 @@ def prepare_insert_payload(
     for key in list(insert_payload.keys()):
         if key in {"model", "series", "version_name", "submitted_by_id"}:
             continue
-        merged_value = merged.get(key)
+        value = cube_details.get(key)
 
-        if key == "size" and merged_value is not None:
-            insert_payload[key] = format_dimensions(str(merged_value))
+        if key == "size" and value is not None:
+            insert_payload[key] = format_dimensions(str(value))
 
-        elif key in {
-            "magnetic",
-            "maglev",
-            "smart",
-            "stickered",
-            "wca_legal",
-            "modded",
-            "ball_core",
-        }:
-            if merged_value is True and insert_payload["slug"]:
-                features_payload.append(
-                    {"feature": key, "cube": insert_payload["slug"]}
-                )
+        elif value is not None:
+            insert_payload[key] = value
 
-        elif merged_value is not None:
-            insert_payload[key] = merged_value
+    # Features
+
+    features_payload: List[CubeFeaturesDBSchema] = []
+
+    FEATURES_KEYS = {
+        "magnetic",
+        "maglev",
+        "smart",
+        "stickered",
+        "wca_legal",
+        "modded",
+        "ball_core",
+    }
+
+    for key in FEATURES_KEYS:
+        value = cube_details.get(key)
+        if value is True and insert_payload["slug"]:
+            features_payload.append({"feature": key, "cube": insert_payload["slug"]})
 
     # Vendor Links
 
     vendor_links_payload: List[VendorLinkInsertPayload] = []
+    if not vendor_links:
+        logger.info("No vendor links")
+        return insert_payload, features_payload, vendor_links_payload
+
     slug = insert_payload.get("slug", "")
     if not slug:
         logger.warning("Unable to prepare vendor links payload without a cube slug.")
@@ -1134,6 +794,7 @@ def main() -> None:
     jobs = fetch_jobs(limit)
     for job in jobs:
         job_id = job["id"]
+        job_link = job["link"]
         user_id_value = job.get("user_id")
         submitted_by_id = user_id_value if user_id_value else None
 
@@ -1143,13 +804,16 @@ def main() -> None:
 
         try:
             set_job_as_running(job_id)
-            job_links = fetch_job_links(job_id)
-            store_cube_details = fetch_store_cube_details(job_links)
-            verify_cube_details(store_cube_details)
-            vendor_links = prepare_vendor_links(job_links)
-            merged_details = merge_cube_details(store_cube_details)
-            insert_payload, features_payload, vendor_links_payload = prepare_insert_payload(
-                merged_details, submitted_by_id, vendor_links
+            store_cube_details = fetch_store_cube_details(job_link)
+            if not store_cube_details:
+                raise ValueError(
+                    "No cube details were found for this link. (%s)", job_link
+                )
+            vendor_links = prepare_vendor_links(job_link)
+            insert_payload, features_payload, vendor_links_payload = (
+                prepare_insert_payload(
+                    store_cube_details, submitted_by_id, vendor_links
+                )
             )
             insert_to_database(insert_payload, features_payload, vendor_links_payload)
             set_job_as_done(job_id)
