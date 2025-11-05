@@ -1,4 +1,5 @@
 import re, sys, os
+import requests
 from bs4 import BeautifulSoup
 
 
@@ -34,8 +35,7 @@ def thecubicle_cube_details(html: str) -> Specs:
         "stickered": None,
         "wca_legal": None,
         "modded": None,
-        "ball_core": None,
-        "source": "thecubicle"
+        "ball_core": None
     }
 
     nameLbl = soup.find("h1", {"itemprop": "name"})
@@ -47,10 +47,15 @@ def thecubicle_cube_details(html: str) -> Specs:
 
         if "maglev" in nameLow:
             specs["maglev"] = True
-        elif "smart" in nameLow:
+
+        if any(k in nameLow for k in ["smart", "ai"]):
             specs["smart"] = True
-        elif "ball core" in nameLow:
+
+        if  any(k in nameLow for k in ["ball core", "ball-core"]):
             specs["ball_core"] = True
+
+        if "uv" in nameLow:
+            specs["surface_finish"] = "UV Coated"
 
     meta = soup.find("meta", {"itemprop": "image"})
     if meta:
@@ -85,11 +90,6 @@ def thecubicle_cube_details(html: str) -> Specs:
         elif key in {"dimensions"}:
             specs["size"] = value
 
-        elif key in {"gross weight"}:
-            numeric_value = _extract_number(value)
-            if numeric_value is not None:
-                specs["weight"] = numeric_value
-
         elif key in {"item weight"}:
             numeric_value = _extract_number(value)
             if numeric_value is not None:
@@ -98,14 +98,13 @@ def thecubicle_cube_details(html: str) -> Specs:
         else:
             continue
 
+    if specs["smart"] == True:
+        specs["wca_legal"] = False
+
     return specs
 
 
 if __name__ == "__main__":
-    html = open(
-        "C:/Users/ilans/Documents/GitHub/cubescraper/.debug/TheCubicle/dayan-guhong-pro-m-54mm-maglev.html",
-        "r",
-        encoding="utf-8",
-    ).read()
+    html = requests.get("https://www.thecubicle.com/en-global/products/moyu-weilong-v11-ai-3x3-8-magnet-ball-core-maglev-18th-anniversary-edition?f=versions").text
 
     print(thecubicle_cube_details(html))
