@@ -16,13 +16,10 @@ from typing import (
     List,
     Dict,
     Any,
-    Iterable,
 )
-from collections import Counter, defaultdict
 from urllib.parse import urlparse
 from rapidfuzz import fuzz
 from slugify import slugify
-from difflib import get_close_matches
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from src.common.supabaseClient import supabase
