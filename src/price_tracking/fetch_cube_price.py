@@ -51,7 +51,6 @@ from src.common.supabaseClient import supabase
 SUPPORTED_VENDORS = (
     "thecubicle.com",
     "gancube.com",
-    "speedcubeshop.com",
     "speedcubes.co.za",
 )
 
