@@ -1,5 +1,7 @@
 import re, sys, os
+import requests
 from bs4 import BeautifulSoup
+import json
 
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -34,7 +36,6 @@ def scs_cube_details(html: str) -> Specs:
         "wca_legal": None,
         "modded": None,
         "ball_core": None,
-        "source": "scs"
     }
 
     img = soup.select_one("img[id^='product-featured-image']")
@@ -61,7 +62,7 @@ def scs_cube_details(html: str) -> Specs:
             specs["magnetic"] = True
         if "maglev" in nameLow:
             specs["maglev"] = True
-        if "smart" in nameLow:
+        if any(token in nameLow for token in ["smart", "ai"]):
             specs["smart"] = True
             specs["wca_legal"] = False
         if any(token in nameLow for token in ["ball core", "ball-core"]):
@@ -107,9 +108,8 @@ def scs_cube_details(html: str) -> Specs:
 
 
 if __name__ == "__main__":
-    html = open(
-        "C:/Users/ilans/Documents/GitHub/cubescraper/.debug/SpeedCubeShop/gan-15-maglev-uv-10th-anniversary-edition.html",
-        "r",
-        encoding="utf-8",
-    ).read()
-    print(scs_cube_details(html))
+    html = requests.get(
+        "https://speedcubeshop.com/collections/bluetooth-smart-cubes/products/gan-12-ui-3x3-bluetooth-smart-cube-powerpod-charger-magnetic-maglev-uv-coated?variant=41271901651057"
+    ).text
+
+    print(json.dumps(scs_cube_details(html), indent=2))

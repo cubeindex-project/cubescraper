@@ -50,7 +50,8 @@ def thecubicle_cube_details(html: str) -> Specs:
 
         if any(k in nameLow for k in ["smart", "ai"]):
             specs["smart"] = True
-
+            specs["wca_legal"] = False
+            
         if  any(k in nameLow for k in ["ball core", "ball-core"]):
             specs["ball_core"] = True
 
@@ -97,9 +98,6 @@ def thecubicle_cube_details(html: str) -> Specs:
 
         else:
             continue
-
-    if specs["smart"] == True:
-        specs["wca_legal"] = False
 
     return specs
 
