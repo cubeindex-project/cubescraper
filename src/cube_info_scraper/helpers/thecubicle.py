@@ -1,6 +1,7 @@
 import re, sys, os
 import requests
 from bs4 import BeautifulSoup
+import json
 
 
 sys.path.append(
@@ -105,4 +106,4 @@ def thecubicle_cube_details(html: str) -> Specs:
 if __name__ == "__main__":
     html = requests.get("https://www.thecubicle.com/en-global/products/moyu-weilong-v11-ai-3x3-8-magnet-ball-core-maglev-18th-anniversary-edition?f=versions").text
 
-    print(thecubicle_cube_details(html))
+    print(json.dumps(thecubicle_cube_details(html), indent=2))
