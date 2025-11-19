@@ -235,7 +235,7 @@ def fetch_jobs(limit: int = 100) -> List[Dict[str, Any]]:
     try:
         query = (
             supabase.table("cube_scrap_runs")
-            .select("id, user_id, link")
+            .select("id, user_id, url")
             .order("created_at")
         )
 
@@ -791,7 +791,7 @@ def main() -> None:
     jobs = fetch_jobs(limit)
     for job in jobs:
         job_id = job["id"]
-        job_link = job["link"]
+        job_link = job["url"]
         user_id_value = job.get("user_id")
         submitted_by_id = user_id_value if user_id_value else None
 
