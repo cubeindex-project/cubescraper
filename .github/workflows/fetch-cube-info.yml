@@ -1,8 +1,6 @@
 name: Fetch cube info for pending jobs
 
 on:
-  schedule:
-    - cron: "0 */1 * * *"
   workflow_dispatch:
 
 jobs:
