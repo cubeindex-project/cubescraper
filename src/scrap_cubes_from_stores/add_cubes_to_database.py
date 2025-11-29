@@ -20,7 +20,7 @@ from slugify import slugify
 # ──────────────────────────────────────────────────────────────────────────────
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from src.common.supabaseClient import supabase  # noqa: E402
+from cubescraper.common.supabase import supabase  # noqa: E402
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1) File locations
