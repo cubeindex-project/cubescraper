@@ -9,6 +9,8 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      PYTHONPATH: "${{ github.workspace }}/src"
 
     steps:
       - name: Checkout repo
