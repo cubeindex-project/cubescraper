@@ -8,10 +8,14 @@ Run again at any time — conflicting rows are upserted instead of failing.
 """
 
 from __future__ import annotations
-import json, re, os, sys
-from pathlib import Path
-from html import unescape
+
+import json
+import os
+import re
+import sys
 from collections import OrderedDict
+from html import unescape
+from pathlib import Path
 
 from slugify import slugify
 
@@ -20,7 +24,7 @@ from slugify import slugify
 # ──────────────────────────────────────────────────────────────────────────────
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from cubescraper.common.supabase import supabase  # noqa: E402
+from cubescraper.common.supabase import create_supabase_client  # noqa: E402
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1) File locations
@@ -249,7 +253,7 @@ SKIP_PRODUCT_TYPES = {
     "Jibbitz",
     "Keychain",
     "Lubricant",
-    "Lubricant" "set",
+    "Lubricantset",
     "Game",
     "mod",
     "service",
@@ -261,7 +265,7 @@ SKIP_PRODUCT_TYPES = {
     "Pouch",
     "Logo",
     "blindfold",
-    "gift"
+    "gift",
 }
 SURFACE_MAP = {
     "uv": "UV Coated",
@@ -392,7 +396,7 @@ def normalize_product(prod: dict) -> list[dict]:
         .replace(extract_series_name(prod.get("title", "")), "")
         .strip(),
         "slug": slugify(
-            text=extract_series_name(prod.get("title", ""))
+            extract_series_name(prod.get("title", ""))
             + prod.get("title", "").replace(
                 extract_series_name(prod.get("title", "")), ""
             )
@@ -430,7 +434,7 @@ def normalize_product(prod: dict) -> list[dict]:
             row = base.copy()
             row["weight"] = v.get("grams", 0)
             row["related_to"] = row["slug"]
-            row["slug"] = slugify(text=row["slug"] + " " + v.get("title", ""))
+            row["slug"] = slugify(row["slug"] + " " + v.get("title", ""))
             row["version_type"] = "Trim"
             row["version_name"] = v.get("title", "")
             if v.get("featured_image", None) != None:
@@ -448,6 +452,7 @@ def write_rows_to_supabase(rows: list[dict], chunk: int = 500) -> None:
     Insert (or upsert) rows in ≤500-record chunks to avoid the 1 000-row REST cap.
     Duplicate primary-key rows are merged (UPSERT) so the script is re-runnable.
     """
+    supabase = create_supabase_client()
     for start in range(0, len(rows), chunk):
         batch = rows[start : start + chunk]
         # On‐conflict columns must match the PK/unique constraint in your table.
@@ -498,4 +503,5 @@ def main() -> None:
 
 # ──────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    print("Deprecated: this script is part of the old store-scraping workflow.\n")
     main()
