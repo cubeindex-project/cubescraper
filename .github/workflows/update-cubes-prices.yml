@@ -1,4 +1,4 @@
-name: Fetch Cube Prices
+name: Update Cube Prices
 
 on:
   schedule:
@@ -17,8 +17,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-          cache: 'pip'
+          python-version: "3.14"
+          cache: "pip"
 
       - name: Install dependencies
         run: |
@@ -31,5 +31,5 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           echo ">>> Starting cube price fetch job..."
-          python src/price_tracking/fetch_cube_price.py --debug --limit 150
+          python src/cubescraper/price_tracker/main.py --commit
           echo ">>> Job finished."
