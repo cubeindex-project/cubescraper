@@ -1,0 +1,37 @@
+name: Fetch Cube Prices
+
+on:
+  schedule:
+    - cron: "0 */6 *  * *" # every 6 hours, 0 minutes past the hour
+  workflow_dispatch: # allow manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONPATH: "${{ github.workspace }}/src"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run fetch_cube_price
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          echo ">>> Starting cube price fetch job..."
+          python src/price_tracking/fetch_cube_price.py --debug --limit 150
+          echo ">>> Job finished."
