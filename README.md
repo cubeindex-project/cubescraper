@@ -3,7 +3,7 @@
 Cube Scraper is a collection of small Python utilities for helping building and maintaining a cube
 product index.
 
-[![Fetch Cube Prices](https://github.com/cubeindex-project/cubescraper/actions/workflows/update_cubes_prices.yml/badge.svg)](https://github.com/cubeindex-project/cubescraper/actions/workflows/update_cubes_prices.yml)
+[![Update Cube Prices](https://github.com/cubeindex-project/cubescraper/actions/workflows/update-cubes-prices.yml/badge.svg)](https://github.com/cubeindex-project/cubescraper/actions/workflows/update-cubes-prices.yml)
 
 ## Requirements
 
