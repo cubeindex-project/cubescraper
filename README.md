@@ -1,9 +1,7 @@
 # Cube Scraper
 
-Cube Scraper is a collection of small Python utilities for building a cube
-product index.  The scripts can download listings from several cube stores,
-normalize the data and push it to a Supabase database.  A separate tool keeps
-vendor prices in sync with the database.
+Cube Scraper is a collection of small Python utilities for helping building and maintaining a cube
+product index.
 
 [![Fetch Cube Prices](https://github.com/cubeindex-project/cubescraper/actions/workflows/update_cubes_prices.yml/badge.svg)](https://github.com/cubeindex-project/cubescraper/actions/workflows/update_cubes_prices.yml)
 
@@ -29,46 +27,21 @@ SUPABASE_SERVICE_KEY=<service-role-key>
 
 ```
 src/                # scraping and data-import scripts
-data/
-  raw/              # raw product listings downloaded from stores
-  processed/        # normalized product data ready for inspection/import
 ```
 
 ## Usage
 
-### 1. Fetch products from a Shopify store
+### Main scripts
 
-Download all products for a supported store (e.g. `scs`, `cubicle`):
+- `python src/cubescraper/price_tracker/main.py [--commit]` refreshes vendor link price and availability with optional HTML capture for debugging.
 
-```
-python src/scrap_cubes_from_stores/fetch_stores_products.py scs
-```
+### Deprecated (legacy store scraping)
 
-The script writes `<store>_products.json` to `data/raw/`.
+The older Shopify scraping pipeline is no longer maintained but remains in the repo:
 
-### 2. Normalize and upload to Supabase
-
-After downloading product files, normalize them and upsert into the database:
-
-```
-python src/scrap_cubes_from_stores/add_cubes_to_database.py
-```
-
-### 3. Track vendor prices
-
-Periodically update prices and availability for known vendor links:
-
-```
-python src/price_tracking/fetch_cube_price.py --limit 20 --log
-```
-
-Force check all supported links (ignoring cooldown) with:
-
-```
-python src/price_tracking/fetch_cube_price.py --force --log
-```
+- `src/cubescraper/deprecated/scrap_cubes_from_stores/fetch_stores_products.py` (download raw store product JSON)
+- `src/cubescraper/deprecated/scrap_cubes_from_stores/add_cubes_to_database.py` (normalize and upsert products)
 
 ## License
 
 This project is available under the MIT License.  See `LICENSE` for details.
-

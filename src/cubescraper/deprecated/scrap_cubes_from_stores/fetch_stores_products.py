@@ -1,11 +1,11 @@
-import sys
-import time
+import argparse
 import itertools
 import json
 import pathlib
+import sys
 import threading
-import argparse
-from typing import List, Dict, Any
+import time
+from typing import Any, Dict, List
 
 import requests
 
@@ -25,7 +25,7 @@ STORES: Dict[str, str] = {
     "sc-au": "https://speedcube.com.au/products.json",
     "d-fan": "https://d-fantix.com/products.json",
     "kill-cubes": "https://killercubes.com/products.json",
-    "cube-speed": "https://cubeforspeed.com/products.json"
+    "cube-speed": "https://cubeforspeed.com/products.json",
 }
 
 PAGE_LIMIT = 250  # Shopify max per page
@@ -122,6 +122,7 @@ def parse_args() -> argparse.Namespace:
 
 
 if __name__ == "__main__":
+    print("Deprecated: this script is part of the old store-scraping workflow.\n")
     args = parse_args()
     base_url = STORES[args.store]
 

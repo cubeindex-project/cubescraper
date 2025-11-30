@@ -1,6 +1,8 @@
-from bs4 import BeautifulSoup
-from typing import Any, Dict, Optional, Tuple
 import re
+
+from cubescraper.price_tracker.parser import soupify
+from cubescraper.price_tracker.price_types import ParseResult
+from cubescraper.tools.test_parser import run_parser_test
 
 available_keyword = [
     "http://schema.org/InStock",
@@ -23,27 +25,23 @@ unavailable_keyword = [
 
 def parse_cubicle(
     html: str,
-) -> Tuple[Optional[float], Optional[bool], Dict[str, Any]]:
-    """
-    TheCubicle: price via <meta itemprop="price" content="..">
-                availability via <link itemprop="availability" href="http://schema.org/...">
-    """
-    soup = BeautifulSoup(html, "lxml")
+) -> ParseResult:
+    soup = soupify(html)
 
     price_tag = soup.find("meta", attrs={"itemprop": "price"})
     availability_tag = soup.find("link", attrs={"itemprop": "availability"})
 
-    price, available, availability = None, None, None
+    price, availability, availability_url = None, None, None
 
     if availability_tag:
-        availability = availability_tag.get("href")
+        availability_url = availability_tag.get("href")
 
-    if availability in available_keyword:
-        available = True
-    elif availability in unavailable_keyword:
-        available = False
+    if availability_url in available_keyword:
+        availability = True
+    elif availability_url in unavailable_keyword:
+        availability = False
     else:
-        available = None
+        availability = None
 
     if price_tag:
         raw = price_tag.get("content")
@@ -54,13 +52,8 @@ def parse_cubicle(
             except Exception:
                 price = None
 
-    return (
-        price,
-        available,
-        {
-            "html": True,
-            "reason": "availability+price",
-            "price_node": str(price_tag) if price_tag else None,
-            "availability_node": str(availability_tag) if availability_tag else None,
-        },
-    )
+    return ParseResult(price, availability)
+
+
+if __name__ == "__main__":
+    run_parser_test(parse_cubicle)
