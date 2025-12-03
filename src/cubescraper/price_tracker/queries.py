@@ -15,7 +15,7 @@ async def fetch_vendor_links() -> List[CubeVendorLink]:
         data = cast(List[CubeVendorLink], response.data or [])
         return data
     except Exception as e:
-        logger.error("Failed to fetch vendor links from database: %r", e, exc_info=True)
+        logger.exception("Failed to fetch vendor links from database: %r", e)
         return []
 
 
@@ -33,11 +33,10 @@ async def update_vendor_link(payload: CubeVendorLinkPayload, commit: bool):
             .execute()
         )
     except Exception as e:
-        logger.error(
+        logger.exception(
             "Exception during database update for id=%r: %r",
             payload.get("id"),
             e,
-            exc_info=True,
         )
     else:
         logger.info(

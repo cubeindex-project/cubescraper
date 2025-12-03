@@ -102,13 +102,12 @@ async def async_fetch_web_page(url: str) -> Optional[str]:
                 break
 
             except httpx.HTTPError as exc:
-                logger.error(
+                logger.exception(
                     "Unexpected HTTPX error fetching %s: %s (attempt %d/%d)",
                     url,
                     exc,
                     attempt,
                     MAX_RETRIES,
-                    exc_info=True,
                 )
                 if attempt < MAX_RETRIES:
                     delay = _backoff_delay(attempt)
