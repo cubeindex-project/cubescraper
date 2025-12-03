@@ -33,7 +33,7 @@ src/                # scraping and data-import scripts
 
 ### Main scripts
 
-- `python src/cubescraper/price_tracker/main.py [--commit]` refreshes vendor link price and availability with optional HTML capture for debugging.
+- `python src/cubescraper/price_tracker/main.py [--commit]` refreshes vendor link price and availability.
 
 ### Deprecated (legacy store scraping)
 
@@ -44,4 +44,4 @@ The older Shopify scraping pipeline is no longer maintained but remains in the r
 
 ## License
 
-This project is available under the MIT License.  See `LICENSE` for details.
+This project is available under the Apache 2.0 License.  See `LICENSE` for details.
