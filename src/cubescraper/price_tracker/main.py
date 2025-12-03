@@ -4,21 +4,14 @@ import logging
 from collections import defaultdict
 from urllib.parse import urlparse
 
-from rich.logging import RichHandler
-
 from cubescraper.common.http import async_fetch_web_page
+from cubescraper.common.logging import setup_logging
 from cubescraper.price_tracker.constants import SUPPORTED_VENDORS
 from cubescraper.price_tracker.parser import parse_url, prepare_update_payload
 from cubescraper.price_tracker.price_types import CubeVendorLink, ParseResult
 from cubescraper.price_tracker.queries import fetch_vendor_links, update_vendor_link
 
-# Set up logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s %(levelname)s: %(message)s",
-    datefmt="%H:%M:%S",
-    handlers=[RichHandler()],
-)
+setup_logging()
 logger = logging.getLogger(__name__)
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -127,12 +120,11 @@ async def main():
     # Handle exceptions if any
     for idx, res in enumerate(results):
         if isinstance(res, Exception):
-            logger.error(
+            logger.exception(
                 "Task %d (url=%s) raised exception: %s",
                 idx,
                 vendor_link_rows[idx].get("url"),
                 res,
-                exc_info=True,
             )
 
     logger.info(
