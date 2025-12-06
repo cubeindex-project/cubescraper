@@ -1,6 +1,6 @@
 import re
 
-from cubescraper.price_tracker.parser import soupify
+from cubescraper.common.parser import soupify
 from cubescraper.price_tracker.price_types import ParseResult
 from cubescraper.tools.test_parser import run_parser_test
 
@@ -23,7 +23,7 @@ unavailable_keyword = [
 ]
 
 
-def parse_cubicle(
+def parse_thecubicle(
     html: str,
 ) -> ParseResult:
     soup = soupify(html)
@@ -56,4 +56,4 @@ def parse_cubicle(
 
 
 if __name__ == "__main__":
-    run_parser_test(parse_cubicle)
+    run_parser_test(parse_thecubicle)

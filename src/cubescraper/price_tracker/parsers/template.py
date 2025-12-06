@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from cubescraper.price_tracker.parser import soupify
+from cubescraper.common.parser import soupify
 from cubescraper.price_tracker.price_types import ParseResult
 from cubescraper.tools.test_parser import run_parser_test
 
@@ -9,7 +9,7 @@ def parser(html: str) -> ParseResult:
     """
     Parse a cube store product page and extract its price + availability.
     """
-    soup = soupify(html)  # noqa: F841 <- Please remove this line
+    soup = soupify(html)  # noqa: F841 <- Please remove this comment
 
     # Default values (None = "parser did not find anything")
     price: float | None = None

@@ -2,17 +2,11 @@ import logging
 from importlib import import_module
 from typing import Callable, Optional
 
-from bs4 import BeautifulSoup
-
 from cubescraper.common.parser import get_hostname
 from cubescraper.price_tracker.constants import SUPPORTED_VENDORS
 from cubescraper.price_tracker.price_types import CubeVendorLinkPayload, ParseResult
 
 logger = logging.getLogger(__name__)
-
-
-def soupify(html: str):
-    return BeautifulSoup(html, "lxml")
 
 
 def resolve_vendor_parser(url: str) -> Optional[Callable[[str], ParseResult]]:
