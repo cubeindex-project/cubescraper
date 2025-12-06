@@ -2,14 +2,16 @@ annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.11.0
 beautifulsoup4==4.14.2
+cachetools==5.5.2
 certifi==2025.11.12
 cffi==2.0.0
 charset-normalizer==3.4.4
 click==8.3.1
-cryptography==46.0.3
+cryptography==44.0.3
 deprecation==2.1.0
 dotenv==0.9.9
 fastapi==0.123.4
+fastapi-jwks==2.0.0
 h11==0.16.0
 h2==4.3.0
 hpack==4.1.0
@@ -43,6 +45,7 @@ StrEnum==0.4.15
 supabase==2.24.0
 supabase-auth==2.24.0
 supabase-functions==2.24.0
+types-cachetools==5.5.0.20240820
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 urllib3==2.5.0
