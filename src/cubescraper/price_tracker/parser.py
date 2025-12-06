@@ -1,24 +1,16 @@
 import logging
 from importlib import import_module
 from typing import Callable, Optional
-from urllib.parse import urlparse
 
-from bs4 import BeautifulSoup
-
+from cubescraper.common.parser import get_hostname
 from cubescraper.price_tracker.constants import SUPPORTED_VENDORS
 from cubescraper.price_tracker.price_types import CubeVendorLinkPayload, ParseResult
 
 logger = logging.getLogger(__name__)
 
 
-def soupify(html: str):
-    return BeautifulSoup(html, "lxml")
-
-
 def resolve_vendor_parser(url: str) -> Optional[Callable[[str], ParseResult]]:
-    parsed = urlparse(url)
-    host = (parsed.hostname or "").lower()
-
+    host = (get_hostname(url) or "").lower()
     if not host:
         logger.warning(
             "resolve_vendor_parser: URL has no hostname — invalid URL given: %r", url
@@ -31,11 +23,10 @@ def resolve_vendor_parser(url: str) -> Optional[Callable[[str], ParseResult]]:
             try:
                 module = import_module(module_name)
             except ImportError as e:
-                logger.error(
+                logger.exception(
                     "Failed to import parser module for domain %s: %s",
                     domain_suffix,
                     e,
-                    exc_info=True,
                 )
                 return None
 
@@ -70,7 +61,7 @@ def parse_url(url: str, html: str, debug: bool = False) -> ParseResult:
         except Exception:
             if debug:
                 logger.debug("%s tried to parse %s", parser.__name__, url)
-                logger.error("Parse error", exc_info=True)
+                logger.exception("Parse error")
             else:
                 logger.warning(
                     "An error occurred while parsing the HTML for %s — skipping (use --debug for details)",

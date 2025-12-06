@@ -3,7 +3,7 @@ from typing import Callable, Optional
 from cubescraper.common.http import fetch_web_page
 
 
-def run_parser_test(parser: Callable[[str], Optional[str]]) -> Optional[str]:
+def run_parser_test(parser: Callable[[str], Optional[object]]) -> Optional[object]:
     """
     Simple CLI helper to test a parser against a single product page URL.
     - Asks for a URL

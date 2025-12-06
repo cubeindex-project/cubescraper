@@ -1,6 +1,6 @@
 import re
 
-from cubescraper.price_tracker.parser import soupify
+from cubescraper.common.parser import soupify
 from cubescraper.price_tracker.price_types import ParseResult
 from cubescraper.tools.test_parser import run_parser_test
 
