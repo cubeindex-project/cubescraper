@@ -25,8 +25,9 @@ payload_injector = JWTTokenInjector[SupabaseToken]()
 jwks_config = JWKSConfig(
     url="https://spsqaktodgqnqbkgilxp.supabase.co/auth/v1/.well-known/jwks.json"
 )
+decode_config = JWTDecodeConfig(audience=["authenticated"])
 jwks_validator = JWKSValidator[SupabaseToken](
-    decode_config=JWTDecodeConfig(),
+    decode_config=decode_config,
     jwks_config=jwks_config,
 )
 jwks_auth = JWKSAuth(jwks_validator=jwks_validator)
