@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import Depends, FastAPI, HTTPException, Security
 from fastapi_jwks.dependencies.jwk_auth import JWKSAuth
 from fastapi_jwks.injector import JWTTokenInjector
@@ -9,7 +11,7 @@ from cubescraper.cube_info_scraper.main import process_job
 
 
 class AutofillRequest(BaseModel):
-    id: int
+    id: UUID
     url: str
 
 
@@ -35,13 +37,8 @@ jwks_auth = JWKSAuth(jwks_validator=jwks_validator)
 app = FastAPI(dependencies=[Security(jwks_auth)])
 
 
-@app.post("/autofill")
-async def autofill(
-    req: AutofillRequest,
-    token: SupabaseToken = Depends(payload_injector),
-):
-    user_id = token.sub
-
+@app.post("/autofill", dependencies=[Depends(payload_injector)])
+async def autofill(req: AutofillRequest):
     job_id = req.id
     store_url = req.url.strip()
 
@@ -56,4 +53,4 @@ async def autofill(
     if not data:
         raise HTTPException(status_code=404, detail="No data found")
 
-    return {"id": job_id, "user_id": user_id, "autofilled": data}
+    return data

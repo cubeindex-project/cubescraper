@@ -1,5 +1,6 @@
 import argparse
 import logging
+from uuid import UUID
 
 from cubescraper.common.http import async_fetch_web_page
 from cubescraper.common.logging import setup_logging
@@ -18,7 +19,7 @@ parser = argparse.ArgumentParser(
 )
 
 
-async def process_job(job_id: int, job_link: str) -> ParserResult:
+async def process_job(job_id: UUID, job_link: str) -> ParserResult:
     logger.info("Next job fetched! id=%s", job_id)
     try:
         html = await async_fetch_web_page(job_link)
@@ -36,4 +37,5 @@ async def process_job(job_id: int, job_link: str) -> ParserResult:
         raise
 
     logger.info("Job completed successfully! id=%s", job_id)
+    logger.debug("Output: %s", cube_details)
     return cube_details
