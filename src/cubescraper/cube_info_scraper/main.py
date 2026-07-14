@@ -3,16 +3,12 @@ import logging
 from uuid import UUID
 
 from cubescraper.common.http import async_fetch_web_page
-from cubescraper.common.logging import setup_logging
-from cubescraper.cube_info_scraper.cube_info_types import ParserResult
+from cubescraper.common.utils import get_short_uuid
+from cubescraper.cube_info_scraper.cube_info_types import CubeInfoParserResult
 from cubescraper.cube_info_scraper.parser import parse_cube_details
+from cubescraper.common.logging import log_context
 
-setup_logging()
 logger = logging.getLogger(__name__)
-
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("httpcore").setLevel(logging.WARNING)
-logging.getLogger("supabase").setLevel(logging.WARNING)
 
 parser = argparse.ArgumentParser(
     "Fetch cube info",
@@ -20,23 +16,27 @@ parser = argparse.ArgumentParser(
 )
 
 
-async def process_job(job_id: UUID, job_link: str) -> ParserResult:
-    logger.info("Next job fetched! id=%s", job_id)
+async def process_job(job_id: UUID, job_link: str) -> CubeInfoParserResult:
+    short_job_id = get_short_uuid(job_id)
+    token = log_context.set(f"job_id={short_job_id}")
     try:
-        html = await async_fetch_web_page(job_link)
-        if not html:
-            raise RuntimeError("Failed to fetch web page.")
+        logger.info("Next job fetched! url=%s", job_link)
+        try:
+            html = await async_fetch_web_page(job_link, follow_redirects=True)
+            if not html:
+                logger.error("Failed to fetch web page. url=%s", job_link)
+                raise RuntimeError("Failed to fetch web page.")
 
-        cube_details = parse_cube_details(html, job_link)
-        if not cube_details:
-            raise RuntimeError(
-                f"No cube details were found for this link. ({job_link})"
-            )
+            cube_details = parse_cube_details(html, job_link)
 
-    except Exception:
-        logger.exception("Job failed id=%s url=%s", job_id, job_link)
-        raise
+        except Exception:
+            logger.exception("Job failed url=%s", job_link)
+            raise
 
-    logger.info("Job completed successfully! id=%s", job_id)
-    logger.debug("Output: %s", cube_details)
-    return cube_details
+        logger.info(
+            "Job completed successfully!",
+        )
+        logger.debug("Job output: %s", cube_details)
+        return cube_details
+    finally:
+        log_context.reset(token)

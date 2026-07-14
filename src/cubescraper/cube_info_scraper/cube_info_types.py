@@ -1,19 +1,24 @@
-from typing import Literal, Optional, TypedDict
+from typing import TypedDict
 
-CubeVersionType = Literal["Base", "Trim", "Limited"]
-CubeSurfaceFinish = Optional[Literal["Frosted", "UV Coated", "Glossy", "Sculpted"]]
+from cubescraper.common.database_types import (
+    PublicCubeSurfaceFinishes,
+    PublicCubeVersionType,
+)
 
 
-class ParserResult(TypedDict, total=False):
+class CubeInfoParserResult(TypedDict, total=False):
+    name: str
     brand: str
     image_url: str
+
     type: str
     discontinued: bool
     release_date: str
     weight: float
-    version_type: CubeVersionType
-    surface_finish: CubeSurfaceFinish
+    version_type: PublicCubeVersionType
+    surface_finish: PublicCubeSurfaceFinishes
     size: str
+
     magnetic: bool
     maglev: bool
     smart: bool

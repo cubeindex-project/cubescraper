@@ -1,99 +1,75 @@
 import logging
-from importlib import import_module
-from typing import Callable, Optional
+from typing import Callable
 
-from rapidfuzz import fuzz, process
-
-from cubescraper.common.parser import get_hostname
+from cubescraper.common.database_types import PublicCubeSurfaceFinishes
+from cubescraper.common.exceptions import UnsupportedVendorError
+from cubescraper.common.utils import get_hostname, get_parser
 from cubescraper.cube_info_scraper.constants import (
-    FUZZY_OVERRIDES,
-    SUPPORTED_VENDORS,
     SURFACE_FINISH,
+    WCA_LEGAL_CUBE_TYPES,
 )
 from cubescraper.cube_info_scraper.cube_info_types import (
-    CubeSurfaceFinish,
-    ParserResult,
+    CubeInfoParserResult,
 )
+from cubescraper.cube_info_scraper.exceptions import (
+    InvalidURLError,
+    ParsingFailedError,
+)
+from cubescraper.cube_info_scraper.queries import get_enabled_vendors
+from cubescraper.cube_info_scraper.parser_registry import PARSER_MAP
 
 logger = logging.getLogger(__name__)
 
 
-def resolve_parser(url: str) -> Optional[Callable[[str], ParserResult | None]]:
-    hostname = (get_hostname(url) or "").lower()
-    if not hostname:
-        logger.warning("URL has no hostname — invalid URL given: %r", url)
-        return
-
-    for domain_suffix, dotted in SUPPORTED_VENDORS.items():
-        if hostname.endswith(domain_suffix):
-            module_name, func_name = dotted.split(":", 1)
-            try:
-                module = import_module(module_name)
-            except ImportError as e:
-                logger.exception(
-                    "Failed to import parser module for domain %s: %s", domain_suffix, e
-                )
-                return
-
-            try:
-                parser_func = getattr(module, func_name)
-            except AttributeError:
-                logger.error(
-                    "Parser function %r not found in module %r for domain %s",
-                    func_name,
-                    module_name,
-                    domain_suffix,
-                )
-                return
-
-            return parser_func
-
-    logger.info("No parser registered for hostname %r (%s)", hostname, url)
-    return
-
-
-def parse_cube_details(html: str, url: str) -> ParserResult | None:
-    cube_details: ParserResult | None = None
-
-    parser = resolve_parser(url)
-    if parser is None:
-        logger.warning("No parser implemented for %s", url)
-        return None
-
-    cube_details = parser(html)
-    if cube_details is None:
-        logger.warning("No cube details found for %s", url)
-        return None
-
-    logger.debug("Link processed (%s).", url)
-
-    return cube_details
-
-
-def fuzzy_pick(value: str, allowed: list[str]) -> str | None:
-    value = value.strip()
-
-    if not allowed:
-        logger.warning("Allowed list is empty. Cannot fuzzy match.")
-        return None
-
-    if value in FUZZY_OVERRIDES:
-        return FUZZY_OVERRIDES[value]
-
-    result = process.extractOne(value, allowed, scorer=fuzz.token_sort_ratio)
-
-    if result is None:
-        logger.warning("No fuzzy match found for '%s'. Allowed: %s", value, allowed)
-        return None
-
-    match = result[0]
-
-    return match
-
-
-def detect_surface_finish(text: str) -> CubeSurfaceFinish | None:
+def detect_surface_finish(text: str) -> PublicCubeSurfaceFinishes | None:
     text = text.lower()
     for keyword, label in SURFACE_FINISH.items():
         if keyword in text:
             return label
     return None
+
+
+def is_cube_wca_legal(cube_details: CubeInfoParserResult) -> bool | None:
+    is_wca_legal = cube_details["wca_legal"] if "wca_legal" in cube_details else None
+
+    if "type" in cube_details and cube_details["type"] in WCA_LEGAL_CUBE_TYPES:
+        is_wca_legal = True
+
+    if "smart" in cube_details and cube_details["smart"]:
+        is_wca_legal = False
+
+    return is_wca_legal
+
+
+def resolve_parser(url: str) -> Callable[[str], CubeInfoParserResult | None]:
+    hostname = (get_hostname(url) or "").lower()
+    if not hostname:
+        raise InvalidURLError(f"URL has no hostname: {url}")
+
+    supported_vendors_hostnames = [
+        vendor_hostname.lower()
+        for url in get_enabled_vendors()
+        if (vendor_hostname := get_hostname(url)) is not None
+    ]
+
+    if not any([hostname.endswith(supported_hostname) for supported_hostname in supported_vendors_hostnames]):
+        raise UnsupportedVendorError(f"Vendor '{hostname}' is not supported.")
+
+    return get_parser(hostname, PARSER_MAP)
+
+
+def parse_cube_details(html: str, url: str) -> CubeInfoParserResult:
+    parser = resolve_parser(url)
+
+    logger.info("Started scraping cube info from HTML using %s", parser.__name__)
+    cube_details = parser(html)
+    logger.info("Finished scraping cube info from HTML file using %s", parser.__name__)
+    if not cube_details:
+        raise ParsingFailedError(f"Parser was unable to find cube details for: {url}")
+
+    if "wca_legal" not in cube_details:
+        wca_legal = is_cube_wca_legal(cube_details)
+        if wca_legal is not None:
+            cube_details["wca_legal"] = wca_legal
+
+    return cube_details
