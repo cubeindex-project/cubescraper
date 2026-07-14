@@ -1,21 +1,28 @@
 import asyncio
-import logging
 from typing import Optional
 
 import httpx
 
-DEFAULT_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0"
-    ),
-    "Accept": "text/html",
-}
+from cubescraper.common.logging import logging
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+}
 DEFAULT_TIMEOUT = 10.0
 MAX_RETRIES = 3
 INITIAL_BACKOFF = 1.0
+
+
+def _backoff_delay(attempt: int) -> float:
+    """Generic exponential backoff helper."""
+    return INITIAL_BACKOFF * (2 ** (attempt - 1))
 
 
 def _retry_delay_for_response(resp: httpx.Response, attempt: int) -> Optional[float]:
@@ -33,29 +40,23 @@ def _retry_delay_for_response(resp: httpx.Response, attempt: int) -> Optional[fl
         try:
             retry_after = float(retry_after_header)
         except ValueError:
-            # Ignore malformed header; we will fall back to exponential backoff
             retry_after = None
 
     if retry_after is not None:
         return retry_after
 
     # Fallback to exponential backoff if Retry-After is missing/invalid
-    return INITIAL_BACKOFF * (2 ** (attempt - 1))
+    return _backoff_delay(attempt)
 
 
-def _backoff_delay(attempt: int) -> float:
-    """Generic exponential backoff helper."""
-    return INITIAL_BACKOFF * (2 ** (attempt - 1))
+def fetch_web_page(url: str, follow_redirects: bool = False) -> Optional[str]:
+    return asyncio.run(async_fetch_web_page(url, follow_redirects))
 
 
-def fetch_web_page(url: str) -> Optional[str]:
-    return asyncio.run(async_fetch_web_page(url))
-
-
-async def async_fetch_web_page(url: str) -> Optional[str]:
+async def async_fetch_web_page(url: str, follow_redirects: bool = False) -> str:
     async with httpx.AsyncClient(
         headers=DEFAULT_HEADERS,
-        follow_redirects=True,
+        follow_redirects=follow_redirects,
         timeout=DEFAULT_TIMEOUT,
     ) as client:
         for attempt in range(1, MAX_RETRIES + 1):
@@ -63,9 +64,9 @@ async def async_fetch_web_page(url: str) -> Optional[str]:
                 resp = await client.get(url)
 
                 delay = _retry_delay_for_response(resp, attempt)
-                if delay is not None and attempt < MAX_RETRIES:
+                if delay and attempt < MAX_RETRIES:
                     logger.warning(
-                        "429 Too Many Requests for %s — retrying after %.1fs "
+                        "429 Too Many Requests for %s: retrying after %.1fs "
                         "(attempt %d/%d)",
                         url,
                         delay,
@@ -89,20 +90,21 @@ async def async_fetch_web_page(url: str) -> Optional[str]:
                 if attempt < MAX_RETRIES:
                     delay = _backoff_delay(attempt)
                     await asyncio.sleep(delay)
+                else:
+                    raise
 
             except httpx.HTTPStatusError as exc:
-                code = exc.response.status_code if exc.response is not None else None
                 logger.error(
                     "HTTP error fetching %s : status %s (attempt %d/%d)",
                     url,
-                    code,
+                    exc.response.status_code,
                     attempt,
                     MAX_RETRIES,
                 )
-                break
+                raise
 
             except httpx.HTTPError as exc:
-                logger.exception(
+                logger.error(
                     "Unexpected HTTPX error fetching %s: %s (attempt %d/%d)",
                     url,
                     exc,
@@ -112,6 +114,8 @@ async def async_fetch_web_page(url: str) -> Optional[str]:
                 if attempt < MAX_RETRIES:
                     delay = _backoff_delay(attempt)
                     await asyncio.sleep(delay)
+                else:
+                    raise
 
-        logger.error("Max retries reached for %s — giving up", url)
-        return None
+        logger.error("Max retries reached for %s: giving up", url)
+        raise
