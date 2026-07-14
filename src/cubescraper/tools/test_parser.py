@@ -3,10 +3,12 @@ from typing import Callable, Optional
 from cubescraper.common.http import fetch_web_page
 
 
-def run_parser_test(parser: Callable[[str], Optional[object]]) -> Optional[object]:
+def run_parser_test(
+    parser: Callable[[str], Optional[object]], link: Optional[str] = None
+) -> Optional[object]:
     """
     Simple CLI helper to test a parser against a single product page URL.
-    - Asks for a URL
+    - Asks for a URL (if none provided)
     - Fetches the HTML
     - Runs the parser
     - Prints and returns the result
@@ -15,23 +17,22 @@ def run_parser_test(parser: Callable[[str], Optional[object]]) -> Optional[objec
     print("Paste a product page URL to test your parser.")
     print("Press Enter on an empty line to cancel.\n")
 
-    link = input("Product page URL: ").strip()
     if not link:
-        print("No URL entered. Aborting.")
-        return None
+        link = input("Product page URL: ").strip()
+
+    if not link:
+        raise Exception("No URL entered. Aborting.")
 
     print("\n[1/3] Fetching page...")
     html = fetch_web_page(link)
     if not html:
-        print("[ERROR] Failed to fetch the page (empty or None response).")
-        return None
+        raise Exception("Failed to fetch the page (empty or None response).")
 
     print("[2/3] Running parser...")
     try:
         result = parser(html)
     except Exception as e:
-        print(f"[ERROR] Exception while parsing page: {e}")
-        return None
+        raise Exception(f"Exception while parsing page: {e}") from e
 
     print("[3/3] Parser result:\n")
     print(result)
