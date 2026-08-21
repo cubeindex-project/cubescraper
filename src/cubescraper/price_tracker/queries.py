@@ -1,5 +1,5 @@
 import logging
-from typing import List, cast
+from typing import cast
 
 from cubescraper.common.common_types import JSON
 from cubescraper.common.database_types import (
@@ -13,7 +13,7 @@ from cubescraper.common.supabase import (
 logger = logging.getLogger(__name__)
 
 
-async def fetch_vendor_links() -> List[PublicCubeVendorLinks]:
+async def fetch_vendor_links() -> list[PublicCubeVendorLinks]:
     supabase = await create_async_supabase_client()
     try:
         response = await supabase.table("cube_vendor_links").select("*").execute()
@@ -48,7 +48,7 @@ async def update_vendor_link(payload: PublicCubeVendorLinksUpdate, commit: bool)
         )
 
 
-async def get_enabled_vendors() -> List[str]:
+async def get_enabled_vendors() -> list[str]:
     try:
         supabase = await create_async_supabase_client()
         response = await (

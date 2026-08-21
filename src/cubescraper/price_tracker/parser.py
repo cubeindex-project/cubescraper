@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Optional
+import typing
 
 from bs4 import BeautifulSoup
 
@@ -38,7 +38,7 @@ def get_currency_from_meta(soup: BeautifulSoup) -> str | None:
         logger.warning("Couldn't find currency meta tag")
 
 
-def resolve_vendor_parser(url: str) -> Optional[Callable[[str], ParseResult]]:
+def resolve_vendor_parser(url: str) -> typing.Callable[[str], ParseResult] | None:
     host = (get_hostname(url) or "").lower()
     if not host:
         logger.warning("URL has no hostname: invalid URL given (%s)", url)

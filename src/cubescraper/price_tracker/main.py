@@ -3,10 +3,10 @@ import asyncio
 import logging
 import random
 import time
-from uuid import UUID
-import httpx
 from collections import defaultdict
-from typing import List, Optional
+from uuid import UUID
+
+import httpx
 
 from cubescraper.common.database_types import PublicCubeVendorLinks
 from cubescraper.common.http import async_fetch_web_page
@@ -36,8 +36,8 @@ DEFAULT_PER_DOMAIN_DELAY = 2.0
 logger = logging.getLogger(__name__)
 
 stats = {"changed": 0, "unchanged": 0, "skipped": 0, "failed": 0}
-domain_semaphores: Optional[defaultdict[str, asyncio.Semaphore]] = None
-domain_rate_locks: Optional[defaultdict[str, asyncio.Lock]] = None
+domain_semaphores: defaultdict[str, asyncio.Semaphore] | None = None
+domain_rate_locks: defaultdict[str, asyncio.Lock] | None = None
 domain_last_request_at: dict[str, float] = {}
 
 
@@ -71,15 +71,12 @@ def is_link_dead(exception: Exception) -> bool:
     if isinstance(exception, httpx.HTTPStatusError):
         return exception.response.status_code in DEAD_LINK_STATUS_CODES
 
-    if isinstance(exception, DEAD_LINK_EXCEPTIONS):
-        return True
-
-    return False
+    return isinstance(exception, DEAD_LINK_EXCEPTIONS)
 
 
 def is_supported(
     url: str,
-    supported_vendors: List[str],
+    supported_vendors: list[str],
 ) -> bool:
     supported_vendor_hosts = {
         (get_hostname(url) or url).lower() for url in supported_vendors
@@ -92,9 +89,9 @@ def is_supported(
 
 
 def remove_unsupported_vendors(
-    vendor_links_rows: List[PublicCubeVendorLinks],
-    supported_vendors: List[str],
-) -> List[PublicCubeVendorLinks]:
+    vendor_links_rows: list[PublicCubeVendorLinks],
+    supported_vendors: list[str],
+) -> list[PublicCubeVendorLinks]:
     final_list = []
     for vendor_links_row in vendor_links_rows:
         if is_supported(vendor_links_row.url, supported_vendors):
@@ -106,9 +103,9 @@ def remove_unsupported_vendors(
 
 
 def remove_dead_links(
-    vendor_links_rows: List[PublicCubeVendorLinks],
-) -> List[PublicCubeVendorLinks]:
-    final_list: List[PublicCubeVendorLinks] = []
+    vendor_links_rows: list[PublicCubeVendorLinks],
+) -> list[PublicCubeVendorLinks]:
+    final_list: list[PublicCubeVendorLinks] = []
     for row in vendor_links_rows:
         if row.is_dead:
             stats["skipped"] += 1
@@ -164,6 +161,12 @@ async def refresh_vendor_link(
         try:
             await wait_for_rate_limit(link, per_domain_delay)
             parse_result = await scrape_vendor_link(link)
+
+            if parse_result.availability is None or parse_result.price is None:
+                raise ValueError(
+                    "Parser did not return complete price data: "
+                    + f"price={parse_result.price!r}, availability={parse_result.availability!r}"
+                )
         except Exception as exc:
             logger.exception(
                 "An error occurred while fetching url=%s.",
@@ -176,13 +179,6 @@ async def refresh_vendor_link(
                 )
             stats["failed"] += 1
             return
-
-        if parse_result.availability is None:
-            logger.warning("Availability not found")
-            parse_result.availability = old_availability
-        if parse_result.price is None:
-            logger.warning("Price not found")
-            parse_result.price = old_price
 
         changed = False
         if parse_result.price != old_price:

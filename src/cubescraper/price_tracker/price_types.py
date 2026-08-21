@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 
 @dataclass
 class ParseResult:
-    price: Optional[float]
-    availability: Optional[bool]
+    price: float | None
+    availability: bool | None
 
 
 class CubeVendorLinkPayload(TypedDict):
