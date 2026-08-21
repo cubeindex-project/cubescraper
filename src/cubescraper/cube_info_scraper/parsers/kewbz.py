@@ -1,7 +1,17 @@
 from __future__ import annotations
 
 from cubescraper.common.logging import logging, setup_logging
-from cubescraper.common.utils import extract_all_json_ld, extract_number, format_dimensions, fuzzy_pick, get_brand_from_json_ld, get_image_from_json_ld, get_name_from_json_ld, get_product_json_ld, soupify
+from cubescraper.common.utils import (
+    extract_all_json_ld,
+    extract_number,
+    format_dimensions,
+    fuzzy_pick,
+    get_brand_from_json_ld,
+    get_image_from_json_ld,
+    get_name_from_json_ld,
+    get_product_json_ld,
+    soupify,
+)
 from cubescraper.cube_info_scraper.cube_info_types import CubeInfoParserResult
 from cubescraper.cube_info_scraper.queries import (
     get_allowed_brands,
@@ -59,7 +69,9 @@ def parse_kewbz(html: str) -> CubeInfoParserResult:
                     if numeric_value:
                         specs["weight"] = numeric_value
                     else:
-                        logger.warning("Couldn't extract weight from value: (%s)", value)
+                        logger.warning(
+                            "Couldn't extract weight from value: (%s)", value
+                        )
                 elif key == "magnetic":
                     specs["magnetic"] = value.lower() == "magnetic"
                 elif "brand" not in specs and key == "vendor":
@@ -69,7 +81,9 @@ def parse_kewbz(html: str) -> CubeInfoParserResult:
                     else:
                         logger.warning("Couldn't normalize brand: (%s)", value)
                 else:
-                    logger.info("Table key (%s) doesn't match any known one: skipping.", key)
+                    logger.info(
+                        "Table key (%s) doesn't match any known one: skipping.", key
+                    )
                     continue
         else:
             logger.warning("No table rows found in the specs table")
@@ -82,4 +96,6 @@ def parse_kewbz(html: str) -> CubeInfoParserResult:
 if __name__ == "__main__":
     setup_logging()
 
-    run_parser_test(parse_kewbz, "https://kewbz.co.uk/collections/nxn-events/products/yj-mgc-4x4-m")
+    run_parser_test(
+        parse_kewbz, "https://kewbz.co.uk/collections/nxn-events/products/yj-mgc-4x4-m"
+    )

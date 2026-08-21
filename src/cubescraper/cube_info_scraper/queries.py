@@ -1,6 +1,6 @@
 import logging
 from functools import lru_cache
-from typing import List, cast
+from typing import cast
 
 from cubescraper.common.supabase import create_supabase_client
 
@@ -14,7 +14,7 @@ def _get_supabase_client():
         return None
 
 @lru_cache(maxsize=1)
-def get_enabled_vendors() -> List[str]:
+def get_enabled_vendors() -> list[str]:
     supabase = _get_supabase_client()
     if supabase is None:
         return []
@@ -34,7 +34,7 @@ def get_enabled_vendors() -> List[str]:
 
 
 @lru_cache(maxsize=1)
-def get_allowed_types() -> List[str]:
+def get_allowed_types() -> list[str]:
     supabase = _get_supabase_client()
     if supabase is None:
         return []

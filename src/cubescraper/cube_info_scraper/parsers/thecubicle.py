@@ -1,7 +1,12 @@
 from urllib.parse import urljoin
 
 from cubescraper.common.logging import logging, setup_logging
-from cubescraper.common.utils import extract_number, format_dimensions, fuzzy_pick, soupify
+from cubescraper.common.utils import (
+    extract_number,
+    format_dimensions,
+    fuzzy_pick,
+    soupify,
+)
 from cubescraper.cube_info_scraper.constants import (
     BALL_CORE,
     FUZZY_OVERRIDES,

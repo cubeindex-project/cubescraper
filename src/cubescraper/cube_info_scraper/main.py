@@ -3,10 +3,10 @@ import logging
 from uuid import UUID
 
 from cubescraper.common.http import async_fetch_web_page
+from cubescraper.common.logging import log_context
 from cubescraper.common.utils import get_short_uuid
 from cubescraper.cube_info_scraper.cube_info_types import CubeInfoParserResult
 from cubescraper.cube_info_scraper.parser import parse_cube_details
-from cubescraper.common.logging import log_context
 
 logger = logging.getLogger(__name__)
 

@@ -15,8 +15,8 @@ from cubescraper.cube_info_scraper.exceptions import (
     InvalidURLError,
     ParsingFailedError,
 )
-from cubescraper.cube_info_scraper.queries import get_enabled_vendors
 from cubescraper.cube_info_scraper.parser_registry import PARSER_MAP
+from cubescraper.cube_info_scraper.queries import get_enabled_vendors
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,12 @@ def resolve_parser(url: str) -> Callable[[str], CubeInfoParserResult | None]:
         if (vendor_hostname := get_hostname(url)) is not None
     ]
 
-    if not any([hostname.endswith(supported_hostname) for supported_hostname in supported_vendors_hostnames]):
+    if not any(
+        [
+            hostname.endswith(supported_hostname)
+            for supported_hostname in supported_vendors_hostnames
+        ]
+    ):
         raise UnsupportedVendorError(f"Vendor '{hostname}' is not supported.")
 
     return get_parser(hostname, PARSER_MAP)

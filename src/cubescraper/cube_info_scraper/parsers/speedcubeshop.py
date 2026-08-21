@@ -2,7 +2,18 @@ import re
 from urllib.parse import urljoin
 
 from cubescraper.common.logging import logging, setup_logging
-from cubescraper.common.utils import clean_cube_type, extract_all_json_ld, extract_number, format_dimensions, fuzzy_pick, get_brand_from_json_ld, get_image_from_json_ld, get_name_from_json_ld, get_product_json_ld, soupify
+from cubescraper.common.utils import (
+    clean_cube_type,
+    extract_all_json_ld,
+    extract_number,
+    format_dimensions,
+    fuzzy_pick,
+    get_brand_from_json_ld,
+    get_image_from_json_ld,
+    get_name_from_json_ld,
+    get_product_json_ld,
+    soupify,
+)
 from cubescraper.cube_info_scraper.constants import (
     BALL_CORE,
     FUZZY_OVERRIDES,
