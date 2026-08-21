@@ -1,5 +1,5 @@
 import logging
-from typing import Callable
+import typing
 
 from cubescraper.common.database_types import PublicCubeSurfaceFinishes
 from cubescraper.common.exceptions import UnsupportedVendorError
@@ -30,7 +30,7 @@ def detect_surface_finish(text: str) -> PublicCubeSurfaceFinishes | None:
 
 
 def is_cube_wca_legal(cube_details: CubeInfoParserResult) -> bool | None:
-    is_wca_legal = cube_details["wca_legal"] if "wca_legal" in cube_details else None
+    is_wca_legal = cube_details.get("wca_legal")
 
     if "type" in cube_details and cube_details["type"] in WCA_LEGAL_CUBE_TYPES:
         is_wca_legal = True
@@ -41,7 +41,7 @@ def is_cube_wca_legal(cube_details: CubeInfoParserResult) -> bool | None:
     return is_wca_legal
 
 
-def resolve_parser(url: str) -> Callable[[str], CubeInfoParserResult | None]:
+def resolve_parser(url: str) -> typing.Callable[[str], CubeInfoParserResult | None]:
     hostname = (get_hostname(url) or "").lower()
     if not hostname:
         raise InvalidURLError(f"URL has no hostname: {url}")
