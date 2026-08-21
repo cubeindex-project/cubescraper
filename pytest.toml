@@ -1,0 +1,7 @@
+[pytest]
+markers = [
+    "live: tests that hit real vendor websites",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:supabase.*"
+]

@@ -1,7 +1,6 @@
 # Cube Scraper
 
-Cube Scraper is a collection of small Python utilities for helping building and maintaining a cube
-product index.
+Cube Scraper is a collection of small Python utilities for helping building and maintaining a cube product index.
 
 [![Update Cube Prices](https://github.com/cubeindex-project/cubescraper/actions/workflows/update-cubes-prices.yml/badge.svg)](https://github.com/cubeindex-project/cubescraper/actions/workflows/update-cubes-prices.yml)
 
@@ -20,27 +19,15 @@ Copy `.env.example` to `.env.local` and fill in your credentials:
 
 ```
 SUPABASE_URL=<https://your-project.supabase.co>
-SUPABASE_SERVICE_KEY=<service-role-key>
-```
-
-## Project structure
-
-```
-src/                # scraping and data-import scripts
+SUPABASE_SECRET_KEY=<secret-key>
 ```
 
 ## Usage
 
 ### Main scripts
 
-- `python src/cubescraper/price_tracker/main.py [--commit]` refreshes vendor link price and availability.
-
-### Deprecated (legacy store scraping)
-
-The older Shopify scraping pipeline is no longer maintained but remains in the repo:
-
-- `src/cubescraper/deprecated/scrap_cubes_from_stores/fetch_stores_products.py` (download raw store product JSON)
-- `src/cubescraper/deprecated/scrap_cubes_from_stores/add_cubes_to_database.py` (normalize and upsert products)
+- `scripts/update-prices.sh` refreshes vendor link price and availability.
+- `scripts/run-info-scraper-server.sh` starts a local server that takes HTTP requests to scrape cube product information from vendor websites.
 
 ## License
 

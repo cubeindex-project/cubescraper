@@ -1,80 +1,78 @@
 import logging
-from importlib import import_module
 from typing import Callable, Optional
 
-from cubescraper.common.parser import get_hostname
-from cubescraper.price_tracker.constants import SUPPORTED_VENDORS
-from cubescraper.price_tracker.price_types import CubeVendorLinkPayload, ParseResult
+from bs4 import BeautifulSoup
+
+from cubescraper.common.database_types import PublicCubeVendorLinksUpdate
+from cubescraper.common.exceptions import UnsupportedVendorError
+from cubescraper.common.utils import extract_number, get_hostname, get_parser
+from cubescraper.price_tracker.parser_registry import PARSER_MAP
+from cubescraper.price_tracker.price_types import ParseResult
 
 logger = logging.getLogger(__name__)
+
+
+def get_price_from_meta(soup: BeautifulSoup) -> float | None:
+    price_meta_tag = soup.find("meta", property="product:price:amount") or soup.find(
+        "meta", property="og:price:amount"
+    )
+    if price_meta_tag:
+        raw = price_meta_tag.get("content")
+        if isinstance(raw, str):
+            return extract_number(raw)
+        else:
+            logger.warning("Couldn't extract price")
+    else:
+        logger.warning("Couldn't find price meta tag")
+
+
+def get_currency_from_meta(soup: BeautifulSoup) -> str | None:
+    meta_currency_tag = soup.find("meta", property="product:price:currency")
+    if meta_currency_tag:
+        meta_currency_content = meta_currency_tag.get("content")
+        if isinstance(meta_currency_content, str):
+            return meta_currency_content
+        else:
+            logger.warning("Couldn't extract currency")
+    else:
+        logger.warning("Couldn't find currency meta tag")
 
 
 def resolve_vendor_parser(url: str) -> Optional[Callable[[str], ParseResult]]:
     host = (get_hostname(url) or "").lower()
     if not host:
-        logger.warning(
-            "resolve_vendor_parser: URL has no hostname — invalid URL given: %r", url
-        )
+        logger.warning("URL has no hostname: invalid URL given (%s)", url)
         return None
 
-    for domain_suffix, dotted in SUPPORTED_VENDORS.items():
-        if host.endswith(domain_suffix):
-            module_name, func_name = dotted.split(":", 1)
-            try:
-                module = import_module(module_name)
-            except ImportError as e:
-                logger.exception(
-                    "Failed to import parser module for domain %s: %s",
-                    domain_suffix,
-                    e,
-                )
-                return None
+    try:
+        return get_parser(host, PARSER_MAP)
+    except UnsupportedVendorError as e:
+        logger.warning(e)
+    except Exception:
+        logger.exception("An error occurred while retrieving parser for %s", host)
 
-            try:
-                parser_func = getattr(module, func_name)
-            except AttributeError:
-                logger.error(
-                    "Parser function %r not found in module %r for domain %s",
-                    func_name,
-                    module_name,
-                    domain_suffix,
-                )
-                return None
-
-            return parser_func
-
-    logger.info("No parser registered for hostname %r (%s)", host, url)
     return None
 
 
-def parse_url(url: str, html: str, debug: bool = False) -> ParseResult:
+def parse_url(url: str, html: str) -> ParseResult:
     parser = resolve_vendor_parser(url)
     if not parser:
-        logger.debug("No parser for URL %s — skipping", url)
-        return ParseResult(None, None)
+        raise UnsupportedVendorError("No parser for URL %s", url)
 
-    result = ParseResult(None, None)
-
-    if parser:
-        try:
-            result = parser(html)
-        except Exception:
-            if debug:
-                logger.debug("%s tried to parse %s", parser.__name__, url)
-                logger.exception("Parse error")
-            else:
-                logger.warning(
-                    "An error occurred while parsing the HTML for %s — skipping (use --debug for details)",
-                    url,
-                )
-            return ParseResult(None, None)
-
-    return ParseResult(price=result.price, availability=result.availability)
+    logger.info("Parsing HTML content with %s", parser.__name__)
+    try:
+        return parser(html)
+    except Exception:
+        logger.exception(
+            "An error occurred while parsing the HTML with %s",
+            parser.__name__,
+        )
+        raise
 
 
 def prepare_update_payload(
     id: int, price: float, availability: bool
-) -> CubeVendorLinkPayload:
+) -> PublicCubeVendorLinksUpdate:
     return {
         "id": id,
         "available": availability,
