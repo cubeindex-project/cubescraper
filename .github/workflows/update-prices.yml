@@ -30,7 +30,7 @@ jobs:
       - name: Run fetch_cube_price
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: |
           chmod +x scripts/update-prices.sh
           bash scripts/update-prices.sh --commit
