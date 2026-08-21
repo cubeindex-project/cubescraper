@@ -13,7 +13,6 @@ def _get_supabase_client():
         logger.error("Failed to create Supabase client: %s", exc)
         return None
 
-@lru_cache(maxsize=1)
 def get_enabled_vendors() -> list[str]:
     supabase = _get_supabase_client()
     if supabase is None:
