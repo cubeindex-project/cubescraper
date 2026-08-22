@@ -452,65 +452,65 @@ class PublicCubeTypesUpdate(TypedDict):
 class PublicCubeVendorLinks(BaseModel):
     available: bool = Field(alias="available")
     created_at: datetime.datetime = Field(alias="created_at")
-    cube_slug: str = Field(alias="cube_slug")
+    cube_id: int = Field(alias="cube_id")
     id: int = Field(alias="id")
     is_dead: bool = Field(alias="is_dead")
     last_modified: datetime.datetime = Field(alias="last_modified")
     price: float = Field(alias="price")
     updated_at: datetime.datetime = Field(alias="updated_at")
     url: str = Field(alias="url")
-    vendor_name: str = Field(alias="vendor_name")
+    vendor_id: int = Field(alias="vendor_id")
 
 class PublicCubeVendorLinksInsert(TypedDict):
     available: NotRequired[Annotated[bool, Field(alias="available")]]
     created_at: NotRequired[Annotated[datetime.datetime, Field(alias="created_at")]]
-    cube_slug: Annotated[str, Field(alias="cube_slug")]
+    cube_id: Annotated[int, Field(alias="cube_id")]
     id: NotRequired[Annotated[int, Field(alias="id")]]
     is_dead: NotRequired[Annotated[bool, Field(alias="is_dead")]]
     last_modified: NotRequired[Annotated[datetime.datetime, Field(alias="last_modified")]]
     price: NotRequired[Annotated[float, Field(alias="price")]]
     updated_at: NotRequired[Annotated[datetime.datetime, Field(alias="updated_at")]]
     url: Annotated[str, Field(alias="url")]
-    vendor_name: Annotated[str, Field(alias="vendor_name")]
+    vendor_id: Annotated[int, Field(alias="vendor_id")]
 
 class PublicCubeVendorLinksUpdate(TypedDict):
     available: NotRequired[Annotated[bool, Field(alias="available")]]
     created_at: NotRequired[Annotated[datetime.datetime, Field(alias="created_at")]]
-    cube_slug: NotRequired[Annotated[str, Field(alias="cube_slug")]]
+    cube_id: NotRequired[Annotated[int, Field(alias="cube_id")]]
     id: NotRequired[Annotated[int, Field(alias="id")]]
     is_dead: NotRequired[Annotated[bool, Field(alias="is_dead")]]
     last_modified: NotRequired[Annotated[datetime.datetime, Field(alias="last_modified")]]
     price: NotRequired[Annotated[float, Field(alias="price")]]
     updated_at: NotRequired[Annotated[datetime.datetime, Field(alias="updated_at")]]
     url: NotRequired[Annotated[str, Field(alias="url")]]
-    vendor_name: NotRequired[Annotated[str, Field(alias="vendor_name")]]
+    vendor_id: NotRequired[Annotated[int, Field(alias="vendor_id")]]
 
 class PublicCubeVendorLinksSnapshot(BaseModel):
     available: bool = Field(alias="available")
     created_at: datetime.datetime = Field(alias="created_at")
-    cube_slug: str = Field(alias="cube_slug")
+    cube_id: int = Field(alias="cube_id")
     id: int = Field(alias="id")
     price: float = Field(alias="price")
     url: str = Field(alias="url")
-    vendor_name: str = Field(alias="vendor_name")
+    vendor_id: int = Field(alias="vendor_id")
 
 class PublicCubeVendorLinksSnapshotInsert(TypedDict):
     available: NotRequired[Annotated[bool, Field(alias="available")]]
     created_at: NotRequired[Annotated[datetime.datetime, Field(alias="created_at")]]
-    cube_slug: Annotated[str, Field(alias="cube_slug")]
+    cube_id: Annotated[int, Field(alias="cube_id")]
     id: NotRequired[Annotated[int, Field(alias="id")]]
     price: NotRequired[Annotated[float, Field(alias="price")]]
     url: Annotated[str, Field(alias="url")]
-    vendor_name: Annotated[str, Field(alias="vendor_name")]
+    vendor_id: Annotated[int, Field(alias="vendor_id")]
 
 class PublicCubeVendorLinksSnapshotUpdate(TypedDict):
     available: NotRequired[Annotated[bool, Field(alias="available")]]
     created_at: NotRequired[Annotated[datetime.datetime, Field(alias="created_at")]]
-    cube_slug: NotRequired[Annotated[str, Field(alias="cube_slug")]]
+    cube_id: NotRequired[Annotated[int, Field(alias="cube_id")]]
     id: NotRequired[Annotated[int, Field(alias="id")]]
     price: NotRequired[Annotated[float, Field(alias="price")]]
     url: NotRequired[Annotated[str, Field(alias="url")]]
-    vendor_name: NotRequired[Annotated[str, Field(alias="vendor_name")]]
+    vendor_id: NotRequired[Annotated[int, Field(alias="vendor_id")]]
 
 class PublicCubesModelFeatures(BaseModel):
     created_at: datetime.datetime = Field(alias="created_at")
